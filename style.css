@@ -1,6 +1,6 @@
 :root {
-    --bg-color: #1a261a;
-    --ui-bg: rgba(20, 32, 22, 0.92);
+    --bg-color: #141f15;
+    --ui-bg: rgba(18, 28, 20, 0.94);
     --text-main: #d8ead8;
     --text-highlight: #70e000;
     --border-color: #38b000;
@@ -11,51 +11,86 @@ body {
     font-family: 'Courier New', Courier, monospace; overflow: hidden;
 }
 
+/* Panel Superior */
 #top-bar {
     position: absolute; top: 0; left: 0; width: 100%; background: var(--ui-bg);
     border-bottom: 2px solid var(--border-color); display: flex; justify-content: space-between;
-    padding: 10px 20px; box-sizing: border-box; z-index: 10; font-size: 0.9rem;
+    align-items: center; padding: 6px 15px; box-sizing: border-box; z-index: 10; font-size: 0.85rem;
 }
-.time-controls button { background: #132a13; color: white; border: 1px solid var(--border-color); padding: 5px 10px; cursor: pointer; border-radius: 3px; }
+.time-controls button { background: #132a13; color: white; border: 1px solid var(--border-color); padding: 4px 8px; cursor: pointer; border-radius: 3px; }
 .time-controls button.active { background: #70e000; color: black; font-weight: bold; }
+.clock-display { margin-left: 12px; }
 
+/* Barra de Colonos (Retratos) */
+#colonist-bar { display: flex; gap: 6px; }
+.colonist-card {
+    display: flex; align-items: center; gap: 6px; background: rgba(0, 0, 0, 0.5);
+    border: 1px solid #2d5a27; padding: 3px 8px; border-radius: 4px; cursor: pointer; transition: 0.2s;
+}
+.colonist-card:hover, .colonist-card.selected { border-color: #70e000; background: rgba(56, 176, 0, 0.2); }
+.colonist-avatar-icon { width: 14px; height: 14px; border-radius: 50%; border: 1px solid #fff; }
+
+/* Menú Lateral Desplegable */
 #tools-layer {
-    position: absolute; top: 50px; left: 10px; background: var(--ui-bg); padding: 12px;
-    border: 1px solid var(--border-color); border-radius: 6px; width: 235px; z-index: 10;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    position: absolute; top: 48px; left: 10px; background: var(--ui-bg); padding: 10px;
+    border: 1px solid var(--border-color); border-radius: 6px; width: 220px; z-index: 10;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.6); max-height: 85vh; overflow-y: auto;
 }
-.tool-list button {
-    display: block; width: 100%; padding: 5px 8px; margin-bottom: 3px; font-size: 0.82rem;
-    background: #0d1b0e; color: var(--text-main); border: 1px solid #2d5a27; text-align: left; cursor: pointer; border-radius: 3px;
+.main-tool-btn { width: 100%; padding: 6px; margin-bottom: 6px; font-weight: bold; background: #2d5a27; color: white; border: 1px solid var(--border-color); cursor: pointer; border-radius: 3px; }
+.category-btn {
+    display: block; width: 100%; padding: 6px; margin-top: 5px; font-size: 0.85rem; font-weight: bold;
+    background: #112213; color: var(--text-highlight); border: 1px solid #2d5a27; text-align: left; cursor: pointer; border-radius: 3px;
 }
-.tool-list button.active { background: #38b000; border-color: #70e000; font-weight: bold; color: black; }
-hr { border: 0.5px solid var(--border-color); margin: 6px 0; opacity: 0.4; }
+.sub-menu { display: none; padding-left: 6px; margin-top: 3px; }
+.sub-menu button {
+    display: block; width: 100%; padding: 5px; margin-bottom: 3px; font-size: 0.8rem;
+    background: #0a140b; color: var(--text-main); border: 1px solid #1e3d1a; text-align: left; cursor: pointer; border-radius: 3px;
+}
+.sub-menu button.active, .main-tool-btn.active { background: #38b000; border-color: #70e000; font-weight: bold; color: black; }
+.danger-btn { display: block; width: 100%; padding: 6px; font-size: 0.8rem; background: #2a0a0a; color: #ff4c4c; border: 1px solid #ff4c4c; cursor: pointer; border-radius: 3px; margin-top: 5px;}
+.danger-btn.active { background: #ff4c4c; color: black; font-weight: bold; }
+hr { border: 0.5px solid var(--border-color); margin: 6px 0; opacity: 0.3; }
+.pop-count { margin: 6px 0 0 0; font-size: 0.8rem; text-align: center; }
 
+/* Inspector */
 #inspector-layer {
-    position: absolute; top: 50px; right: 10px; background: var(--ui-bg); padding: 15px;
-    border: 1px solid var(--border-color); border-radius: 6px; width: 260px; z-index: 10;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    position: absolute; top: 48px; right: 10px; background: var(--ui-bg); padding: 12px;
+    border: 1px solid var(--border-color); border-radius: 6px; width: 250px; z-index: 10;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.6);
 }
-h2 { margin: 0 0 10px 0; font-size: 1.1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 5px; color: var(--text-highlight); }
-p { margin: 5px 0; font-size: 0.85rem; }
-.subtitle { font-weight: bold; margin-top: 12px; color: var(--text-highlight); font-size: 0.9rem; }
-.bar-bg { width: 100%; background: #132a13; height: 8px; margin-bottom: 5px; border-radius: 4px; overflow: hidden; }
+.inspector-header { display: flex; align-items: center; gap: 10px; border-bottom: 1px solid var(--border-color); padding-bottom: 6px; margin-bottom: 8px; }
+#insp-avatar-preview { width: 20px; height: 20px; border-radius: 50%; border: 2px solid #fff; }
+h2 { margin: 0; font-size: 1.1rem; color: var(--text-highlight); }
+p { margin: 4px 0; font-size: 0.82rem; }
+.subtitle { font-weight: bold; margin-top: 10px; color: var(--text-highlight); font-size: 0.85rem; }
+.bar-bg { width: 100%; background: #0d1b0e; height: 7px; margin-bottom: 4px; border-radius: 3px; overflow: hidden; }
 .bar-fill-energia { background: #70e000; height: 100%; transition: width 0.2s; }
 .bar-fill-hambre { background: #ffaa00; height: 100%; transition: width 0.2s; }
 
-#schedule-layer {
+/* Horarios Desplegables */
+#schedule-wrapper {
     position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
-    background: var(--ui-bg); padding: 8px 15px; border: 1px solid var(--border-color);
-    border-radius: 6px; z-index: 10; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+    z-index: 10; text-align: center;
 }
-#schedule-bar { display: flex; margin-top: 6px; border: 1px solid #000; border-radius: 3px; overflow: hidden; }
-.hour-block { width: 19px; height: 19px; cursor: pointer; border-right: 1px solid rgba(0,0,0,0.3); font-size: 0.6rem; line-height: 19px; text-align: center; color: rgba(255,255,255,0.7); }
+#btn-toggle-horario {
+    background: var(--ui-bg); color: var(--text-highlight); border: 1px solid var(--border-color);
+    padding: 6px 14px; border-radius: 4px; cursor: pointer; font-family: inherit; font-weight: bold;
+}
+#schedule-layer {
+    background: var(--ui-bg); padding: 10px; border: 1px solid var(--border-color);
+    border-radius: 6px; margin-top: 5px; box-shadow: 0 4px 15px rgba(0,0,0,0.6);
+}
+.schedule-legend { display: flex; justify-content: center; gap: 12px; margin-bottom: 6px; font-size: 0.75rem; }
+.leg-item { display: flex; align-items: center; gap: 4px; }
+.box { width: 10px; height: 10px; display: inline-block; border-radius: 2px; }
+#schedule-bar { display: flex; border: 1px solid #000; border-radius: 3px; overflow: hidden; }
+.hour-block { width: 18px; height: 18px; cursor: pointer; border-right: 1px solid rgba(0,0,0,0.3); font-size: 0.6rem; line-height: 18px; text-align: center; color: rgba(255,255,255,0.8); }
 .hour-block:last-child { border-right: none; }
 .sch-sueno { background-color: #3a86ff; }
 .sch-trabajo { background-color: #ffbe0b; color: black; }
 .sch-ocio { background-color: #38b000; color: black; }
 
-canvas { display: block; margin: 50px auto 0 auto; border: 2px solid #38b000; user-select: none; box-shadow: 0 0 20px rgba(0,0,0,0.7); }
+canvas { display: block; margin: 45px auto 0 auto; border: 2px solid #38b000; user-select: none; box-shadow: 0 0 20px rgba(0,0,0,0.8); }
 #night-overlay {
     position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
     background: rgba(5, 15, 25, 0.75); pointer-events: none; z-index: 5;
