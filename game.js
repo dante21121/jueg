@@ -139,7 +139,7 @@ function crearColono(x, z, edad) {
         nombre: NOMBRES[Math.floor(Math.random() * NOMBRES.length)],
         x: x, z: z, 
         px: x, pz: z, // Posición flotante continua (Movimiento fluido)
-        velocidad: 0.22, // Píxeles/Tiles por frame
+        velocidad: 0.40, // Píxeles/Tiles por frame
         edad: edad, 
         energia: 100, hambre: 100,
         estadoTxt: "Vagando", 
