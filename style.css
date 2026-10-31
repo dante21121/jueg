@@ -1,57 +1,64 @@
 :root {
-    --bg-color: #050508; --ui-bg: rgba(15, 20, 30, 0.9);
-    --text-main: #c5c6c7; --text-highlight: #66fcf1; --border-color: #45a29e;
+    --bg-color: #1a261a;
+    --ui-bg: rgba(20, 32, 22, 0.92);
+    --text-main: #d8ead8;
+    --text-highlight: #70e000;
+    --border-color: #38b000;
 }
+
 body {
     margin: 0; padding: 0; background-color: var(--bg-color); color: var(--text-main);
     font-family: 'Courier New', Courier, monospace; overflow: hidden;
 }
+
 #top-bar {
     position: absolute; top: 0; left: 0; width: 100%; background: var(--ui-bg);
-    border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between;
+    border-bottom: 2px solid var(--border-color); display: flex; justify-content: space-between;
     padding: 10px 20px; box-sizing: border-box; z-index: 10; font-size: 0.9rem;
 }
-.time-controls button { background: #1f2833; color: white; border: 1px solid var(--border-color); padding: 5px 10px; cursor: pointer; }
-.time-controls button.active { background: #45a29e; color: black; font-weight: bold; }
+.time-controls button { background: #132a13; color: white; border: 1px solid var(--border-color); padding: 5px 10px; cursor: pointer; border-radius: 3px; }
+.time-controls button.active { background: #70e000; color: black; font-weight: bold; }
 
 #tools-layer {
-    position: absolute; top: 50px; left: 10px; background: var(--ui-bg); padding: 15px;
-    border: 1px solid var(--border-color); border-radius: 4px; width: 230px; z-index: 10;
+    position: absolute; top: 50px; left: 10px; background: var(--ui-bg); padding: 12px;
+    border: 1px solid var(--border-color); border-radius: 6px; width: 235px; z-index: 10;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
 }
 .tool-list button {
-    display: block; width: 100%; padding: 6px; margin-bottom: 4px; font-size: 0.85rem;
-    background: #111; color: var(--text-main); border: 1px solid #333; text-align: left; cursor: pointer;
+    display: block; width: 100%; padding: 5px 8px; margin-bottom: 3px; font-size: 0.82rem;
+    background: #0d1b0e; color: var(--text-main); border: 1px solid #2d5a27; text-align: left; cursor: pointer; border-radius: 3px;
 }
-.tool-list button.active { background: #8a2b3b; border-color: #ff4c4c; font-weight: bold; color: white;}
-hr { border: 0.5px solid var(--border-color); margin: 6px 0; opacity: 0.3; }
+.tool-list button.active { background: #38b000; border-color: #70e000; font-weight: bold; color: black; }
+hr { border: 0.5px solid var(--border-color); margin: 6px 0; opacity: 0.4; }
 
 #inspector-layer {
     position: absolute; top: 50px; right: 10px; background: var(--ui-bg); padding: 15px;
-    border: 1px solid var(--border-color); border-radius: 4px; width: 250px; z-index: 10;
+    border: 1px solid var(--border-color); border-radius: 6px; width: 260px; z-index: 10;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.5);
 }
-h2 { margin: 0 0 10px 0; font-size: 1.1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 5px; }
+h2 { margin: 0 0 10px 0; font-size: 1.1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 5px; color: var(--text-highlight); }
 p { margin: 5px 0; font-size: 0.85rem; }
-.subtitle { font-weight: bold; margin-top: 15px; color: var(--text-highlight); }
-.bar-bg { width: 100%; background: #333; height: 8px; margin-bottom: 5px; }
-.bar-fill-energia { background: #4caf50; height: 100%; transition: width 0.2s; }
-.bar-fill-hambre { background: #ff9800; height: 100%; transition: width 0.2s; }
+.subtitle { font-weight: bold; margin-top: 12px; color: var(--text-highlight); font-size: 0.9rem; }
+.bar-bg { width: 100%; background: #132a13; height: 8px; margin-bottom: 5px; border-radius: 4px; overflow: hidden; }
+.bar-fill-energia { background: #70e000; height: 100%; transition: width 0.2s; }
+.bar-fill-hambre { background: #ffaa00; height: 100%; transition: width 0.2s; }
 
 #schedule-layer {
     position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
-    background: var(--ui-bg); padding: 10px; border: 1px solid var(--border-color);
-    border-radius: 4px; z-index: 10; text-align: center;
+    background: var(--ui-bg); padding: 8px 15px; border: 1px solid var(--border-color);
+    border-radius: 6px; z-index: 10; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.5);
 }
-#schedule-bar { display: flex; margin-top: 8px; border: 1px solid #000; }
-.hour-block { width: 20px; height: 20px; cursor: pointer; border-right: 1px solid rgba(0,0,0,0.5); font-size: 0.6rem; line-height: 20px; text-align: center; color: rgba(255,255,255,0.5);}
+#schedule-bar { display: flex; margin-top: 6px; border: 1px solid #000; border-radius: 3px; overflow: hidden; }
+.hour-block { width: 19px; height: 19px; cursor: pointer; border-right: 1px solid rgba(0,0,0,0.3); font-size: 0.6rem; line-height: 19px; text-align: center; color: rgba(255,255,255,0.7); }
 .hour-block:last-child { border-right: none; }
-.sch-sueno { background-color: #3f51b5; }
-.sch-trabajo { background-color: #ffaa00; color: black; }
-.sch-ocio { background-color: #4caf50; }
+.sch-sueno { background-color: #3a86ff; }
+.sch-trabajo { background-color: #ffbe0b; color: black; }
+.sch-ocio { background-color: #38b000; color: black; }
 
-canvas { display: block; margin: 50px auto 0 auto; border: 2px solid #1f2833; user-select: none; }
+canvas { display: block; margin: 50px auto 0 auto; border: 2px solid #38b000; user-select: none; box-shadow: 0 0 20px rgba(0,0,0,0.7); }
 #night-overlay {
     position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
-    background: rgba(0, 5, 20, 0.85); pointer-events: none; z-index: 5;
+    background: rgba(5, 15, 25, 0.75); pointer-events: none; z-index: 5;
     opacity: 0; transition: opacity 3s ease-in-out; mix-blend-mode: multiply;
 }
 .es-noche { opacity: 1 !important; }
