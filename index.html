@@ -3,18 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AETHEL: Fase 3 y 4 - Colonos y Zonificación</title>
+    <title>AETHEL: Vertical Slice (Juego Completo)</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <!-- Capa de Inmersión (Fase 5) -->
+    <div id="ocean-overlay"></div>
+
     <div id="ui-layer">
-        <h2>AETHEL: Motor Híbrido</h2>
+        <h2>AETHEL: Leviathan Ecosystem</h2>
         <div class="stats">
-            <p>Tick Fluidos (100ms): <span id="fluid-tick-count" class="highlight">0</span></p>
-            <p>Tick Colonos (500ms): <span id="colonist-tick-count" class="highlight">0</span></p>
-            <hr style="border-color: var(--border-color); margin: 10px 0;">
-            <p>Población Activa: <span id="poblacion-count" class="highlight">5</span></p>
-            <p>Modo (Usa ESPACIO): <span id="tool-mode" class="highlight">Derramar Linfa</span></p>
+            <p>Tick Fluidos: <span id="fluid-tick-count" class="highlight">0</span></p>
+            <p>Tick Entidades: <span id="colonist-tick-count" class="highlight">0</span></p>
+            <hr>
+            <p>Población: <span class="highlight">5</span> | Anticuerpos: <span id="anticuerpos-count" style="color: #ff4c4c;">0</span></p>
+            <p>Salud Leviatán: <progress id="salud-bar" value="100" max="100"></progress></p>
+            <p>Clima: <span id="clima-estado" class="highlight">Templado</span></p>
+            <hr>
+            <p>Herramienta (ESPACIO): <br><span id="tool-mode" class="highlight">Derramar Linfa</span></p>
+            <button id="btn-inmersion">Activar Inmersión</button>
         </div>
     </div>
     <canvas id="gameCanvas"></canvas>
