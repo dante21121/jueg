@@ -3,52 +3,71 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AETHEL</title>
+    <title>AETHEL: Colony Simulator - Smooth & Detailed</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div id="night-overlay"></div>
 
-    <!-- Panel Superior: Tiempo y Recursos -->
+    <!-- Panel Superior: Tiempo, Recursos y Barra de Colonos (Skins) -->
     <div id="top-bar">
         <div class="time-controls">
             <button id="btn-pause" onclick="setSpeed(0)">⏸ (Espacio)</button>
             <button id="btn-1x" onclick="setSpeed(1)">▶ 1x (1)</button>
             <button id="btn-2x" onclick="setSpeed(2)">▶▶ 2x (2)</button>
             <button id="btn-4x" onclick="setSpeed(4)">▶▶▶ 4x (3)</button>
-            <span style="margin-left: 15px;">Día: <span id="ui-dia" class="highlight">1</span> | <span id="ui-hora" class="highlight">06:00</span></span>
+            <span class="clock-display">Día: <span id="ui-dia" class="highlight">1</span> | <span id="ui-hora" class="highlight">06:00</span></span>
         </div>
+
+        <!-- Selector Rápido de Colonos (Retratos con Skins) -->
+        <div id="colonist-bar"></div>
+
         <div class="resources">
             Biomasa: <span id="ui-biomasa" style="color:#a0e6ff;">0</span> | Comida: <span id="ui-comida" style="color:#ffaa00;">10</span>
         </div>
     </div>
 
-    <!-- Panel Izquierdo: Herramientas -->
+    <!-- Panel Izquierdo: Herramientas Desplegables -->
     <div id="tools-layer">
         <h2>Herramientas</h2>
-        <div class="tool-list">
-            <button onclick="setTool(0)" id="tool-0" class="active">0. 👆 Seleccionar (Drag)</button>
-            <hr>
-            <button onclick="setTool(1)" id="tool-1">1. ⛏️ Excavación</button>
-            <button onclick="setTool(7)" id="tool-7">2. 🔄 Zona Extracción Auto</button>
-            <hr>
-            <button onclick="setTool(2)" id="tool-2">3. 🧱 Pared (5 Biom)</button>
-            <button onclick="setTool(3)" id="tool-3">4. 🚪 Puerta (3 Biom)</button>
-            <button onclick="setTool(4)" id="tool-4">5. 🛏️ Cama Propia (10 Biom)</button>
-            <button onclick="setTool(5)" id="tool-5">6. 🛠️ Mesa Trab. (15 Biom)</button>
-            <button onclick="setTool(6)" id="tool-6">7. 🌱 Zona de Cultivo</button>
-            <hr>
-            <button onclick="setTool(8)" id="tool-8">8. 🏹 Cazar Animales</button>
-            <button onclick="setTool(9)" id="tool-9">9. 🍖 Domesticar Animales</button>
-            <hr>
-            <button onclick="setTool(10)" id="tool-10" style="color: #ff4c4c;">10. ❌ Cancelar / Demoler</button>
+        
+        <button onclick="setTool(0)" id="tool-0" class="active main-tool-btn">👆 Seleccionar / Arrastrar</button>
+
+        <!-- Categoría: Construcción -->
+        <button class="category-btn" onclick="toggleCategory('cat-construccion')">📂 Construcción ▾</button>
+        <div id="cat-construccion" class="sub-menu">
+            <button onclick="setTool(2)" id="tool-2">🧱 Pared (5 Biom)</button>
+            <button onclick="setTool(3)" id="tool-3">🚪 Puerta (3 Biom)</button>
+            <button onclick="setTool(4)" id="tool-4">🛏️ Cama Doble Tile (10 Biom)</button>
+            <button onclick="setTool(5)" id="tool-5">🛠️ Mesa Trab. (15 Biom)</button>
         </div>
-        <p>Población total: <span id="ui-poblacion" class="highlight">3</span></p>
+
+        <!-- Categoría: Zonas y Campo -->
+        <button class="category-btn" onclick="toggleCategory('cat-zonas')">🌾 Zonas y Campo ▾</button>
+        <div id="cat-zonas" class="sub-menu">
+            <button onclick="setTool(1)" id="tool-1">⛏️ Minar / Excavación</button>
+            <button onclick="setTool(7)" id="tool-7">🔄 Zona Extracción Auto</button>
+            <button onclick="setTool(6)" id="tool-6">🌱 Zona de Cultivo</button>
+        </div>
+
+        <!-- Categoría: Fauna -->
+        <button class="category-btn" onclick="toggleCategory('cat-fauna')">🏹 Fauna y Caza ▾</button>
+        <div id="cat-fauna" class="sub-menu">
+            <button onclick="setTool(8)" id="tool-8">🏹 Cazar Animales</button>
+            <button onclick="setTool(9)" id="tool-9">🍖 Domesticar Animales</button>
+        </div>
+
+        <hr>
+        <button onclick="setTool(10)" id="tool-10" class="danger-btn">❌ Cancelar / Demoler</button>
+        <p class="pop-count">Población total: <span id="ui-poblacion" class="highlight">3</span></p>
     </div>
 
     <!-- Panel Derecho: Inspector de Colono -->
     <div id="inspector-layer" style="display: none;">
-        <h2 id="insp-nombre">Nombre</h2>
+        <div class="inspector-header">
+            <div id="insp-avatar-preview"></div>
+            <h2 id="insp-nombre">Nombre</h2>
+        </div>
         <p>Edad: <span id="insp-edad">20</span> | Pareja: <span id="insp-pareja">Ninguna</span></p>
         <p>Cama Asignada: <span id="insp-cama" class="highlight">Sin Cama</span></p>
         <p>Estado: <span id="insp-estado" class="highlight">Vagando</span></p>
@@ -58,18 +77,24 @@
         <div class="bar-bg"><div id="insp-hambre" class="bar-fill-hambre" style="width: 100%"></div></div>
 
         <p class="subtitle">Prioridades de Trabajo:</p>
-        <label><input type="checkbox" id="chk-mineria" onchange="toggleJob('mineria')"> ⛏️ Excavación</label><br>
+        <label><input type="checkbox" id="chk-mineria" onchange="toggleJob('mineria')"> ⛏️ Minería / Excavación</label><br>
         <label><input type="checkbox" id="chk-caza" onchange="toggleJob('caza')"> 🏹 Caza</label><br>
         <label><input type="checkbox" id="chk-construccion" onchange="toggleJob('construccion')"> 🧱 Construcción</label><br>
         <label><input type="checkbox" id="chk-agricultura" onchange="toggleJob('agricultura')"> 🌱 Agricultura</label><br>
         <label><input type="checkbox" id="chk-domesticacion" onchange="toggleJob('domesticacion')"> 🍖 Domesticación</label>
     </div>
 
-    <!-- Panel Inferior: Horario Global -->
-    <div id="schedule-layer">
-        <strong>Horario Global:</strong> 
-        <span style="font-size:0.75rem; margin-left:10px;">Clic en hora para cambiar (Azul: Sueño | Amarillo: Trabajo | Verde: Ocio)</span>
-        <div id="schedule-bar"></div>
+    <!-- Panel Inferior: Horarios Desplegables -->
+    <div id="schedule-wrapper">
+        <button id="btn-toggle-horario" onclick="toggleHorarioUI()">📅 Gestor de Horarios ▾</button>
+        <div id="schedule-layer" style="display: none;">
+            <div class="schedule-legend">
+                <span class="leg-item"><span class="box sch-sueno"></span> Sueño</span>
+                <span class="leg-item"><span class="box sch-trabajo"></span> Trabajo</span>
+                <span class="leg-item"><span class="box sch-ocio"></span> Ocio</span>
+            </div>
+            <div id="schedule-bar"></div>
+        </div>
     </div>
 
     <canvas id="gameCanvas"></canvas>
