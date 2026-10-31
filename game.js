@@ -138,7 +138,7 @@ function crearColono(x, z, edad) {
         nombre: NOMBRES[Math.floor(Math.random() * NOMBRES.length)],
         x: x, z: z, 
         px: x, pz: z, 
-        velocidad: 0.50, // Velocidad incrementada a 0.50
+        velocidad: 0.75, // Velocidad incrementada a 0.50
         edad: edad, 
         energia: 100, hambre: 100,
         estadoTxt: "Vagando", 
@@ -578,7 +578,7 @@ function gameLoop(currentTime) {
         tickLogica += (deltaTime * gameSpeed);
         if (tickLogica >= 120) { 
             tickLogica -= 120;
-            reloj.minutos += 5; 
+            reloj.minutos += 1; 
             if (reloj.minutos >= 60) {
                 reloj.minutos = 0; reloj.hora += 1;
                 colonos.forEach(c => c.edad += 0.005); 
