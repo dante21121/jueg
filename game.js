@@ -1,6 +1,6 @@
 // --- CONFIGURACIÓN BASE Y GRID ---
 const WIDTH = 65, DEPTH = 50, CELL_SIZE = 14;
-const ESTRUCTURA = { NINGUNA: 0, PARED: 1, PUERTA: 2, CAMA: 3, MESA: 4, CULTIVO: 5 };
+const ESTRUCTURA = { NINGUNA: 0, PARED: 1, PUERTA: 2, CAMA_CABECERA: 3, CAMA_PIE: 4, MESA: 5, CULTIVO: 6 };
 const BLUEPRINT = { NINGUNO: 0, MINAR: 1, CONSTRUIR_PARED: 2, CONSTRUIR_PUERTA: 3, CONSTRUIR_CAMA: 4, CONSTRUIR_MESA: 5, DESTRUIR: 6, CONSTRUIR_CULTIVO: 7, COSECHAR: 8 };
 
 const COSTOS = { "CONSTRUIR_PARED": 5, "CONSTRUIR_PUERTA": 3, "CONSTRUIR_CAMA": 10, "CONSTRUIR_MESA": 15, "CONSTRUIR_CULTIVO": 1 };
@@ -16,10 +16,13 @@ let horarioGlobal = [0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,2,2,2];
 let modoHerramienta = 0; 
 let tareasGlobales = []; 
 let idCounter = 1;
+
+// Drag & Hover Preview
 let isDragging = false;
 let dragStart = {x: -1, z: -1}, dragCurrent = {x: -1, z: -1};
+let mouseHoverGrid = {x: -1, z: -1};
 
-// Generación de mapa verde estilizado con tonos y elementos decorativos
+// Generación de terreno verde estilizado
 function generarTerreno() {
     for (let x = 0; x < WIDTH; x++) {
         grid[x] = [];
@@ -28,8 +31,7 @@ function generarTerreno() {
             let n2 = Math.sin(x * 0.05 + z * 0.05) * 1.5;
             let val = n1 + n2;
             
-            // Variedad de tonos de verde y tierra
-            let tonoVerde = 0; // 0: Pasto claro, 1: Pasto medio, 2: Pasto denso, 3: Tierra
+            let tonoVerde = 0;
             if (val > 1.2) tonoVerde = 2;
             else if (val > 0.2) tonoVerde = 1;
             else if (val < -1.0) tonoVerde = 3;
@@ -46,7 +48,7 @@ function generarTerreno() {
                 regeneracionBiomasa: 100, 
                 esZonaExtraccion: false,
                 hasPiso: false,
-                asignadoA: null // Para camas
+                asignadoA: null // ID del colono dueño de la cama
             };
         }
     }
@@ -66,7 +68,7 @@ function generarAnimales(cantidad) {
     }
 }
 
-// --- PATHFINDING & NAVEGACIÓN ---
+// --- PATHFINDING ---
 function encontrarRuta(startX, startZ, targetX, targetZ, stopAdjacent = false) {
     if (startX === targetX && startZ === targetZ) return [];
     let queue = [{x: startX, z: startZ, path: []}];
@@ -95,7 +97,7 @@ function encontrarRuta(startX, startZ, targetX, targetZ, stopAdjacent = false) {
     return null;
 }
 
-// HABITACIONES (DETECCIÓN PISO DE MADERA)
+// HABITACIONES Y PISO AUTOMÁTICO
 function detectarHabitaciones(startX, startZ) {
     let queue = [{x: startX, z: startZ}];
     let visited = new Set(); visited.add(`${startX},${startZ}`);
@@ -123,32 +125,43 @@ function detectarHabitaciones(startX, startZ) {
     }
 }
 
-// --- COLONOS ---
+// --- COLONOS CON SKINS Y MOVIMIENTO FLUIDO (PX/PZ) ---
 let colonos = [];
 let colonoSeleccionado = null;
 const NOMBRES = ["Val", "Kael", "Rye", "Jace", "Lyra", "Sion", "Tess"];
+const PALETA_PIEL = ["#ffe0bd", "#ffd1a4", "#e0ac69", "#c68642", "#8d5524"];
+const PALETA_ROPA = ["#e63946", "#457b9d", "#2a9d8f", "#f4a261", "#9b5de5", "#3a86ff"];
+const PALETA_PELO = ["#2b1e16", "#e9c46a", "#8d5b4c", "#111111", "#d62828"];
 
 function crearColono(x, z, edad) {
     colonos.push({
         id: idCounter++, 
         nombre: NOMBRES[Math.floor(Math.random() * NOMBRES.length)],
-        x: x, z: z, edad: edad, 
+        x: x, z: z, 
+        px: x, pz: z, // Posición flotante continua (Movimiento fluido)
+        velocidad: 0.22, // Píxeles/Tiles por frame
+        edad: edad, 
         energia: 100, hambre: 100,
         estadoTxt: "Vagando", 
         rutaActual: [], 
         tareaActual: null, 
         durmiendo: false,
-        ticksEnTarea: 0, // Anti-stuck counter
-        camaAsignada: null, // {x, z}
+        ticksEnTarea: 0,
+        camaAsignada: null,
+        skin: {
+            piel: PALETA_PIEL[Math.floor(Math.random() * PALETA_PIEL.length)],
+            ropa: PALETA_ROPA[Math.floor(Math.random() * PALETA_ROPA.length)],
+            pelo: PALETA_PELO[Math.floor(Math.random() * PALETA_PELO.length)]
+        },
         trabajosPermitidos: { mineria: true, caza: true, construccion: true, agricultura: true, domesticacion: true },
         relaciones: {}, pareja: null 
     });
-    document.getElementById('ui-poblacion').innerText = colonos.length;
+    actualizarBarraColonosUI();
 }
 
-// --- LÓGICA DE SIMULACIÓN Y TAREAS ---
+// --- SIMULACIÓN E IA ---
 function procesarColonos() {
-    // 1. Crecimiento de vegetación, cultivos y auto-extracción
+    // 1. Crecimiento vegetación y cultivos
     for (let x = 0; x < WIDTH; x++) {
         for (let z = 0; z < DEPTH; z++) {
             let celda = grid[x][z];
@@ -172,7 +185,7 @@ function procesarColonos() {
         }
     }
 
-    // 2. Movimiento de animales
+    // 2. Animales
     for (let anim of animales) {
         if (Math.random() < 0.1) {
             let nx = anim.x + (Math.floor(Math.random() * 3) - 1);
@@ -183,31 +196,26 @@ function procesarColonos() {
         }
     }
 
-    // 3. IA de Colonos
+    // 3. IA Colonos
     let modoActual = horarioGlobal[reloj.hora]; 
 
     for (let colono of colonos) {
-        if (!colono.durmiendo) colono.energia -= 0.05;
-        colono.hambre -= 0.08;
+        if (!colono.durmiendo) colono.energia -= 0.04;
+        colono.hambre -= 0.07;
         if (colono.energia < 0) colono.energia = 0;
         if (colono.hambre < 0) colono.hambre = 0;
 
-        // --- SISTEMA ANTI-BLOQUEOS (TASK TIMEOUT) ---
+        // Anti-bloqueos
         if (colono.tareaActual) {
             colono.ticksEnTarea++;
-            if (colono.ticksEnTarea > 35) { // Si lleva más de ~5 segundos intentando sin lograrlo
-                if (!colono.tareaActual.esCritica) tareasGlobales.push(colono.tareaActual); // Reinsertar en la cola
-                colono.tareaActual = null;
-                colono.rutaActual = [];
-                colono.ticksEnTarea = 0;
-                colono.estadoTxt = "Reevaluando";
-                continue;
+            if (colono.ticksEnTarea > 40) {
+                if (!colono.tareaActual.esCritica) tareasGlobales.push(colono.tareaActual);
+                colono.tareaActual = null; colono.rutaActual = []; colono.ticksEnTarea = 0;
+                colono.estadoTxt = "Reevaluando"; continue;
             }
-        } else {
-            colono.ticksEnTarea = 0;
-        }
+        } else colono.ticksEnTarea = 0;
 
-        // Horario y Necesidades
+        // Necesidades
         let fuerzaDormir = (colono.energia < 20) || (modoActual === 0 && colono.energia < 95);
         if (fuerzaDormir && !colono.tareaActual?.esCritica && !colono.durmiendo) {
             buscarOCrearCamaPropia(colono);
@@ -218,13 +226,11 @@ function procesarColonos() {
         // Ocio
         if (modoActual === 2 && colono.tareaActual && !colono.tareaActual.esCritica) {
             if (colono.tareaActual.tipo !== "CAZAR" && colono.tareaActual.tipo !== "DOMESTICAR") {
-                tareasGlobales.push(colono.tareaActual);
-                colono.tareaActual = null;
-                colono.rutaActual = [];
+                tareasGlobales.push(colono.tareaActual); colono.tareaActual = null; colono.rutaActual = [];
             }
         }
 
-        // Buscar Trabajo (Sistemático y sin atorarse)
+        // Buscar Trabajo
         if (!colono.tareaActual && tareasGlobales.length > 0 && !colono.durmiendo && modoActual === 1) {
             for (let i = 0; i < tareasGlobales.length; i++) {
                 let tarea = tareasGlobales[i];
@@ -235,39 +241,26 @@ function procesarColonos() {
                         let ruta = encontrarRuta(colono.x, colono.z, tarea.x, tarea.z, stopAdj);
                         
                         if (ruta) {
-                            colono.tareaActual = tarea; 
-                            colono.rutaActual = ruta; 
-                            colono.estadoTxt = "Yendo a trabajar";
-                            colono.ticksEnTarea = 0;
-                            tareasGlobales.splice(i, 1); 
-                            break; 
+                            colono.tareaActual = tarea; colono.rutaActual = ruta; colono.estadoTxt = "Yendo a trabajar";
+                            colono.ticksEnTarea = 0; tareasGlobales.splice(i, 1); break; 
                         }
                     }
                 }
             }
         }
 
-        // Movimiento
-        if (colono.rutaActual.length > 0) {
-            let sig = colono.rutaActual[0];
-            colono.x = sig.x; colono.z = sig.z;
-            colono.rutaActual.shift();
-            
-            if (colono.tareaActual && (colono.tareaActual.tipo === "CAZAR" || colono.tareaActual.tipo === "DOMESTICAR")) {
-                let anim = animales.find(a => a.id === colono.tareaActual.animId);
-                if (!anim || anim.hp <= 0) { colono.tareaActual = null; colono.rutaActual = []; continue; }
-                if (Math.abs(colono.x - anim.x) + Math.abs(colono.z - anim.z) > 1) {
-                    colono.tareaActual.x = anim.x; colono.tareaActual.z = anim.z;
-                    colono.rutaActual = encontrarRuta(colono.x, colono.z, anim.x, anim.z, true) || [];
-                }
-            }
-            if (colono.rutaActual.length === 0) ejecutarTarea(colono);
-        } else if (!colono.tareaActual && !colono.durmiendo) {
+        // Desplazamiento fluido continuo por fotograma
+        moverColonoFluido(colono);
+
+        // Vagabundeo Activo
+        if (!colono.tareaActual && !colono.durmiendo && colono.rutaActual.length === 0) {
             colono.estadoTxt = (modoActual === 2) ? "Recreación (Ocio)" : "Vagando";
-            if (Math.random() < 0.35) { 
+            if (Math.random() < 0.25) { 
                 let nx = colono.x + (Math.floor(Math.random() * 5) - 2); 
                 let nz = colono.z + (Math.floor(Math.random() * 5) - 2);
-                if (nx >= 0 && nx < WIDTH && nz >= 0 && nz < DEPTH && grid[nx][nz].caminable) { colono.x = nx; colono.z = nz; }
+                if (nx >= 0 && nx < WIDTH && nz >= 0 && nz < DEPTH && grid[nx][nz].caminable) { 
+                    colono.rutaActual = encontrarRuta(colono.x, colono.z, nx, nz) || [];
+                }
             }
         }
 
@@ -281,40 +274,54 @@ function procesarColonos() {
     actualizarInspectorUI();
 }
 
-// ASIGNACIÓN EXCLUSIVA DE CAMAS
-function buscarOCrearCamaPropia(c) {
-    // 1. Si ya tiene cama asignada y aún existe
-    if (c.camaAsignada) {
-        let bedCelda = grid[c.camaAsignada.x]?.[c.camaAsignada.z];
-        if (bedCelda && bedCelda.estructura === ESTRUCTURA.CAMA && bedCelda.asignadoA === c.id) {
-            let r = encontrarRuta(c.x, c.z, c.camaAsignada.x, c.camaAsignada.z);
-            if (r) { c.tareaActual = { tipo: "DORMIR", esCritica: true, x: c.camaAsignada.x, z: c.camaAsignada.z }; c.rutaActual = r; c.estadoTxt = "Ir a su cama"; return; }
+// MOTOR DE MOVIMIENTO FLUIDO (PX / PZ)
+function moverColonoFluido(c) {
+    if (c.rutaActual.length > 0) {
+        let target = c.rutaActual[0];
+        let dx = target.x - c.px;
+        let dz = target.z - c.pz;
+        let dist = Math.hypot(dx, dz);
+
+        if (dist < c.velocidad) {
+            c.px = target.x; c.pz = target.z;
+            c.x = target.x; c.z = target.z;
+            c.rutaActual.shift();
+            
+            if (c.rutaActual.length === 0) ejecutarTarea(c);
         } else {
-            c.camaAsignada = null; // Cama destruida
+            c.px += (dx / dist) * c.velocidad;
+            c.pz += (dz / dist) * c.velocidad;
+            c.x = Math.round(c.px); c.z = Math.round(c.pz);
         }
     }
+}
 
-    // 2. Buscar cama desocupada y no asignada
+// ASIGNACIÓN INDIVIDUAL DE CAMAS (2 TILES)
+function buscarOCrearCamaPropia(c) {
+    if (c.camaAsignada) {
+        let bedCelda = grid[c.camaAsignada.x]?.[c.camaAsignada.z];
+        if (bedCelda && (bedCelda.estructura === ESTRUCTURA.CAMA_CABECERA || bedCelda.estructura === ESTRUCTURA.CAMA_PIE) && bedCelda.asignadoA === c.id) {
+            let r = encontrarRuta(c.x, c.z, c.camaAsignada.x, c.camaAsignada.z);
+            if (r) { c.tareaActual = { tipo: "DORMIR", esCritica: true, x: c.camaAsignada.x, z: c.camaAsignada.z }; c.rutaActual = r; c.estadoTxt = "Ir a su cama"; return; }
+        } else c.camaAsignada = null;
+    }
+
     for (let x = 0; x < WIDTH; x++) {
         for (let z = 0; z < DEPTH; z++) {
             let celda = grid[x][z];
-            if (celda.estructura === ESTRUCTURA.CAMA && (celda.asignadoA === null || celda.asignadoA === c.id)) {
+            if (celda.estructura === ESTRUCTURA.CAMA_CABECERA && (celda.asignadoA === null || celda.asignadoA === c.id)) {
                 let r = encontrarRuta(c.x, c.z, x, z);
                 if (r) {
                     celda.asignadoA = c.id;
+                    if (grid[x+1]?.[z]?.estructura === ESTRUCTURA.CAMA_PIE) grid[x+1][z].asignadoA = c.id;
                     c.camaAsignada = {x, z};
                     c.tareaActual = { tipo: "DORMIR", esCritica: true, x: x, z: z }; 
-                    c.rutaActual = r; 
-                    c.estadoTxt = "Asignando cama"; 
-                    return; 
+                    c.rutaActual = r; c.estadoTxt = "Asignando cama"; return; 
                 }
             }
         }
     }
-
-    // 3. Si no hay camas disponibles, duerme en el suelo
-    c.tareaActual = { tipo: "DORMIR", esCritica: true, x: c.x, z: c.z }; 
-    c.durmiendo = true;
+    c.tareaActual = { tipo: "DORMIR", esCritica: true, x: c.x, z: c.z }; c.durmiendo = true;
 }
 
 function asignarTareaComer(c) {
@@ -339,27 +346,20 @@ function ejecutarTarea(c) {
         let anim = animales.find(a => a.id === t.animId);
         if (anim && recursos.comida >= 2) {
             recursos.comida -= 2; c.estadoTxt = "Domesticando";
-            if (Math.random() < 0.35) { anim.estado = "domesticado"; }
-            else { anim.estado = "salvaje"; }
+            if (Math.random() < 0.35) anim.estado = "domesticado"; else anim.estado = "salvaje";
         }
     } else {
         let celda = grid[t.x][t.z];
         if (t.tipo === "MINAR") {
-            celda.plano = BLUEPRINT.NINGUNO;
-            celda.regeneracionBiomasa = 0; 
-            celda.tieneArbol = false;
-            recursos.biomasa += 4;
+            celda.plano = BLUEPRINT.NINGUNO; celda.regeneracionBiomasa = 0; celda.tieneArbol = false; recursos.biomasa += 4;
         } 
         else if (t.tipo === "DESTRUIR") {
             celda.plano = BLUEPRINT.NINGUNO; 
-            if (celda.estructura === ESTRUCTURA.CAMA && celda.asignadoA) {
+            if ((celda.estructura === ESTRUCTURA.CAMA_CABECERA || celda.estructura === ESTRUCTURA.CAMA_PIE) && celda.asignadoA) {
                 let colOwner = colonos.find(co => co.id === celda.asignadoA);
                 if (colOwner) colOwner.camaAsignada = null;
             }
-            celda.estructura = ESTRUCTURA.NINGUNA; 
-            celda.caminable = true; 
-            celda.hasPiso = false;
-            celda.asignadoA = null;
+            celda.estructura = ESTRUCTURA.NINGUNA; celda.caminable = true; celda.hasPiso = false; celda.asignadoA = null;
             recursos.biomasa += 2; 
         }
         else if (t.tipo === "COSECHAR") {
@@ -369,7 +369,15 @@ function ejecutarTarea(c) {
             recursos.biomasa -= costo; celda.plano = BLUEPRINT.NINGUNO;
             if (t.tipo === "CONSTRUIR_PARED") { celda.estructura = ESTRUCTURA.PARED; celda.caminable = false; celda.tieneArbol = false; }
             if (t.tipo === "CONSTRUIR_PUERTA") { celda.estructura = ESTRUCTURA.PUERTA; celda.tieneArbol = false; }
-            if (t.tipo === "CONSTRUIR_CAMA") { celda.estructura = ESTRUCTURA.CAMA; celda.tieneArbol = false; }
+            if (t.tipo === "CONSTRUIR_CAMA") {
+                // CAMA DE 2 TILES: Cabecera (Tile X) + Pie (Tile X+1)
+                celda.estructura = ESTRUCTURA.CAMA_CABECERA; celda.tieneArbol = false;
+                if (grid[t.x+1]?.[t.z]) {
+                    grid[t.x+1][t.z].estructura = ESTRUCTURA.CAMA_PIE;
+                    grid[t.x+1][t.z].plano = BLUEPRINT.NINGUNO;
+                    grid[t.x+1][t.z].tieneArbol = false;
+                }
+            }
             if (t.tipo === "CONSTRUIR_MESA") { celda.estructura = ESTRUCTURA.MESA; celda.caminable = false; celda.tieneArbol = false; }
             if (t.tipo === "CONSTRUIR_CULTIVO") { celda.estructura = ESTRUCTURA.CULTIVO; celda.crecimientoCultivo = 0; celda.tieneArbol = false; }
             
@@ -384,7 +392,7 @@ function ejecutarTarea(c) {
     document.getElementById('ui-comida').innerText = recursos.comida;
 }
 
-// --- INTERFAZ & SELECCIÓN ---
+// --- INTERFAZ, DESPLEGABLES Y BINDINGS ---
 window.addEventListener('keydown', (e) => {
     if (e.code === 'Space') setSpeed(gameSpeed === 0 ? 1 : 0);
     if (e.code === 'Digit1') setSpeed(1); 
@@ -401,11 +409,23 @@ function setSpeed(s) {
     if(s===4) document.getElementById('btn-4x').classList.add('active');
 }
 
+function toggleCategory(catId) {
+    let el = document.getElementById(catId);
+    let isVis = el.style.display === 'block';
+    document.querySelectorAll('.sub-menu').forEach(m => m.style.display = 'none');
+    el.style.display = isVis ? 'none' : 'block';
+}
+
+function toggleHorarioUI() {
+    let el = document.getElementById('schedule-layer');
+    el.style.display = el.style.display === 'block' ? 'none' : 'block';
+}
+
 function setTool(t) {
     modoHerramienta = t; colonoSeleccionado = null;
     document.getElementById('inspector-layer').style.display = 'none';
-    document.querySelectorAll('.tool-list button').forEach(b => b.classList.remove('active'));
-    document.getElementById('tool-' + t).classList.add('active');
+    document.querySelectorAll('#tools-layer button').forEach(b => b.classList.remove('active'));
+    document.getElementById('tool-' + t)?.classList.add('active');
 }
 
 function toggleJob(job) { if (colonoSeleccionado) colonoSeleccionado.trabajosPermitidos[job] = document.getElementById('chk-' + job).checked; }
@@ -424,6 +444,30 @@ function cambiarHorario(hora, element) {
     element.className = "hour-block " + (horarioGlobal[hora] === 0 ? "sch-sueno" : (horarioGlobal[hora] === 1 ? "sch-trabajo" : "sch-ocio"));
 }
 
+function actualizarBarraColonosUI() {
+    let html = "";
+    for (let c of colonos) {
+        let isSel = (c === colonoSeleccionado) ? "selected" : "";
+        html += `
+            <div class="colonist-card ${isSel}" onclick="seleccionarColonoPorId(${c.id})">
+                <div class="colonist-avatar-icon" style="background:${c.skin.ropa}; border-color:${c.skin.pelo};"></div>
+                <span>${c.nombre}</span>
+            </div>`;
+    }
+    document.getElementById('colonist-bar').innerHTML = html;
+    document.getElementById('ui-poblacion').innerText = colonos.length;
+}
+
+function seleccionarColonoPorId(id) {
+    let col = colonos.find(c => c.id === id);
+    if (col) {
+        colonoSeleccionado = col;
+        document.getElementById('inspector-layer').style.display = 'block';
+        actualizarInspectorUI();
+        actualizarBarraColonosUI();
+    }
+}
+
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 canvas.width = WIDTH * CELL_SIZE; canvas.height = DEPTH * CELL_SIZE;
@@ -437,10 +481,12 @@ canvas.addEventListener('mousedown', (e) => {
 });
 
 canvas.addEventListener('mousemove', (e) => {
-    if (!isDragging) return;
     const rect = canvas.getBoundingClientRect();
-    dragCurrent.x = Math.max(0, Math.min(WIDTH-1, Math.floor((e.clientX - rect.left) / CELL_SIZE)));
-    dragCurrent.z = Math.max(0, Math.min(DEPTH-1, Math.floor((e.clientY - rect.top) / CELL_SIZE)));
+    mouseHoverGrid.x = Math.max(0, Math.min(WIDTH-1, Math.floor((e.clientX - rect.left) / CELL_SIZE)));
+    mouseHoverGrid.z = Math.max(0, Math.min(DEPTH-1, Math.floor((e.clientY - rect.top) / CELL_SIZE)));
+
+    if (!isDragging) return;
+    dragCurrent.x = mouseHoverGrid.x; dragCurrent.z = mouseHoverGrid.z;
 });
 
 canvas.addEventListener('mouseup', (e) => {
@@ -449,13 +495,14 @@ canvas.addEventListener('mouseup', (e) => {
     let startX = Math.min(dragStart.x, dragCurrent.x), endX = Math.max(dragStart.x, dragCurrent.x);
     let startZ = Math.min(dragStart.z, dragCurrent.z), endZ = Math.max(dragStart.z, dragCurrent.z);
 
-    if (modoHerramienta === 0) { // DRAG SELECT COLONIST
+    if (modoHerramienta === 0) {
         let colsInBox = colonos.filter(c => c.x >= startX && c.x <= endX && c.z >= startZ && c.z <= endZ);
         if (colsInBox.length === 1) {
             colonoSeleccionado = colsInBox[0]; document.getElementById('inspector-layer').style.display = 'block'; actualizarInspectorUI();
         } else {
             colonoSeleccionado = null; document.getElementById('inspector-layer').style.display = 'none';
         }
+        actualizarBarraColonosUI();
     } else {
         for (let x = startX; x <= endX; x++) {
             for (let z = startZ; z <= endZ; z++) { aplicarHerramientaCelda(x, z); }
@@ -466,7 +513,7 @@ canvas.addEventListener('mouseup', (e) => {
 function aplicarHerramientaCelda(mx, mz) {
     let celda = grid[mx][mz];
     
-    if (modoHerramienta === 10) { // CANCELAR / DEMOLER
+    if (modoHerramienta === 10) { // DEMOLER / CANCELAR
         celda.esZonaExtraccion = false;
         if (celda.plano !== BLUEPRINT.NINGUNO) { celda.plano = BLUEPRINT.NINGUNO; tareasGlobales = tareasGlobales.filter(t => t.x !== mx || t.z !== mz); }
         else if (celda.estructura !== ESTRUCTURA.NINGUNA) { celda.plano = BLUEPRINT.DESTRUIR; tareasGlobales.push({ tipo: "DESTRUIR", req: "construccion", x: mx, z: mz }); }
@@ -490,7 +537,14 @@ function aplicarHerramientaCelda(mx, mz) {
         if (modoHerramienta === 1 && celda.regeneracionBiomasa === 100) { celda.plano = BLUEPRINT.MINAR; tareasGlobales.push({ tipo: "MINAR", req: "mineria", x: mx, z: mz }); }
         if (modoHerramienta === 2) { celda.plano = BLUEPRINT.CONSTRUIR_PARED; tareasGlobales.push({ tipo: "CONSTRUIR_PARED", req: "construccion", x: mx, z: mz }); }
         if (modoHerramienta === 3) { celda.plano = BLUEPRINT.CONSTRUIR_PUERTA; tareasGlobales.push({ tipo: "CONSTRUIR_PUERTA", req: "construccion", x: mx, z: mz }); }
-        if (modoHerramienta === 4) { celda.plano = BLUEPRINT.CONSTRUIR_CAMA; tareasGlobales.push({ tipo: "CONSTRUIR_CAMA", req: "construccion", x: mx, z: mz }); }
+        if (modoHerramienta === 4) { 
+            // CAMA DE 2 TILES: Valida celda actual y la siguiente (X+1)
+            if (mx + 1 < WIDTH && grid[mx+1][mz].estructura === ESTRUCTURA.NINGUNA) {
+                celda.plano = BLUEPRINT.CONSTRUIR_CAMA; 
+                grid[mx+1][mz].plano = BLUEPRINT.CONSTRUIR_CAMA;
+                tareasGlobales.push({ tipo: "CONSTRUIR_CAMA", req: "construccion", x: mx, z: mz }); 
+            }
+        }
         if (modoHerramienta === 5) { celda.plano = BLUEPRINT.CONSTRUIR_MESA; tareasGlobales.push({ tipo: "CONSTRUIR_MESA", req: "construccion", x: mx, z: mz }); }
         if (modoHerramienta === 6) { celda.plano = BLUEPRINT.CONSTRUIR_CULTIVO; tareasGlobales.push({ tipo: "CONSTRUIR_CULTIVO", req: "agricultura", x: mx, z: mz }); }
     }
@@ -506,6 +560,8 @@ function actualizarInspectorUI() {
     let txtCama = "Sin Cama";
     if (colonoSeleccionado.camaAsignada) txtCama = `Cama en (${colonoSeleccionado.camaAsignada.x}, ${colonoSeleccionado.camaAsignada.z})`;
     document.getElementById('insp-cama').innerText = txtCama;
+    document.getElementById('insp-avatar-preview').style.background = colonoSeleccionado.skin.ropa;
+    document.getElementById('insp-avatar-preview').style.borderColor = colonoSeleccionado.skin.pelo;
     
     document.getElementById('insp-estado').innerText = colonoSeleccionado.estadoTxt;
     document.getElementById('insp-energia').style.width = colonoSeleccionado.energia + "%";
@@ -518,7 +574,7 @@ function actualizarInspectorUI() {
     document.getElementById('chk-domesticacion').checked = colonoSeleccionado.trabajosPermitidos.domesticacion;
 }
 
-// --- RENDERIZADO VISUAL CON VERDES Y DETALLES ---
+// --- RENDERIZADO VISUAL ---
 let lastTime = 0, tickLogica = 0;
 const overlayNoche = document.getElementById('night-overlay');
 
@@ -528,12 +584,12 @@ function gameLoop(currentTime) {
 
     if (gameSpeed > 0) {
         tickLogica += (deltaTime * gameSpeed);
-        if (tickLogica >= 150) { 
-            tickLogica -= 150;
-            reloj.minutos += 10;
+        if (tickLogica >= 120) { 
+            tickLogica -= 120;
+            reloj.minutos += 5; // El tiempo avanza más relajado
             if (reloj.minutos >= 60) {
                 reloj.minutos = 0; reloj.hora += 1;
-                colonos.forEach(c => c.edad += 0.01); 
+                colonos.forEach(c => c.edad += 0.005); 
             }
             if (reloj.hora >= 24) { reloj.hora = 0; reloj.dia += 1; document.getElementById('ui-dia').innerText = reloj.dia; }
             document.getElementById('ui-hora').innerText = `${reloj.hora < 10 ? "0"+reloj.hora : reloj.hora}:${reloj.minutos < 10 ? "0"+reloj.minutos : reloj.minutos}`;
@@ -548,18 +604,16 @@ function gameLoop(currentTime) {
 function renderizarMundo() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    // 1. DIBUJAR TERRENO VERDE
+    // 1. TERRENO VERDE Y PISOS
     for (let x = 0; x < WIDTH; x++) {
         for (let z = 0; z < DEPTH; z++) {
             let celda = grid[x][z];
             
-            // Paleta de tonos verdes
-            if (celda.tonoVerde === 0) ctx.fillStyle = "#4a7c59"; // Pasto medio
-            else if (celda.tonoVerde === 1) ctx.fillStyle = "#3b6645"; // Pasto oscuro
-            else if (celda.tonoVerde === 2) ctx.fillStyle = "#5c946e"; // Pasto claro/frondoso
-            else ctx.fillStyle = "#7f5539"; // Parche de tierra
+            if (celda.tonoVerde === 0) ctx.fillStyle = "#4a7c59";
+            else if (celda.tonoVerde === 1) ctx.fillStyle = "#3b6645";
+            else if (celda.tonoVerde === 2) ctx.fillStyle = "#5c946e";
+            else ctx.fillStyle = "#7f5539";
 
-            // Si está recién extraído/talado, se oscurece
             if (celda.regeneracionBiomasa < 100) {
                 let osc = Math.floor(celda.regeneracionBiomasa * 0.5);
                 ctx.fillStyle = `rgb(${25 + osc}, ${45 + osc}, ${25 + osc})`;
@@ -567,13 +621,13 @@ function renderizarMundo() {
 
             ctx.fillRect(x * CELL_SIZE, z * CELL_SIZE, CELL_SIZE, CELL_SIZE);
 
-            // Pisos de Madera (Habitaciones)
-            if (celda.hasPiso && celda.estructura === ESTRUCTURA.NINGUNA) {
+            // Pisos de Madera se dibujan DEBAJO de todas las estructuras
+            if (celda.hasPiso) {
                 ctx.fillStyle = "#b07d4f"; ctx.fillRect(x * CELL_SIZE, z * CELL_SIZE, CELL_SIZE, CELL_SIZE);
                 ctx.strokeStyle = "#8d5b30"; ctx.strokeRect(x * CELL_SIZE, z * CELL_SIZE, CELL_SIZE, CELL_SIZE);
             }
 
-            // Árboles Decorativos
+            // Árboles
             if (celda.tieneArbol && celda.estructura === ESTRUCTURA.NINGUNA && celda.regeneracionBiomasa === 100) {
                 ctx.fillStyle = "#2d4a22"; ctx.beginPath(); 
                 ctx.arc((x*CELL_SIZE)+(CELL_SIZE/2), (z*CELL_SIZE)+(CELL_SIZE/2), 4, 0, Math.PI*2); ctx.fill();
@@ -585,11 +639,13 @@ function renderizarMundo() {
                 ctx.strokeStyle = "#2b323d"; ctx.strokeRect(x * CELL_SIZE, z * CELL_SIZE, CELL_SIZE, CELL_SIZE);
             } else if (celda.estructura === ESTRUCTURA.PUERTA) {
                 ctx.fillStyle = "#b07d4f"; ctx.fillRect(x * CELL_SIZE + 3, z * CELL_SIZE + 3, CELL_SIZE - 6, CELL_SIZE - 6);
-            } else if (celda.estructura === ESTRUCTURA.CAMA) {
-                // Renderizado de Cama (Sábana Azul + Almohada Blanca)
-                ctx.fillStyle = (celda.asignadoA !== null) ? "#3f51b5" : "#7986cb"; // Azul más brillante si está asignada
-                ctx.fillRect(x * CELL_SIZE + 2, z * CELL_SIZE + 5, CELL_SIZE - 4, CELL_SIZE - 7); 
-                ctx.fillStyle = "#ffffff"; ctx.fillRect(x * CELL_SIZE + 3, z * CELL_SIZE + 2, CELL_SIZE - 6, 3);
+            } else if (celda.estructura === ESTRUCTURA.CAMA_CABECERA) {
+                // Almohada Blanca + Sábana Azul
+                ctx.fillStyle = "#3f51b5"; ctx.fillRect(x * CELL_SIZE + 2, z * CELL_SIZE + 2, CELL_SIZE - 2, CELL_SIZE - 4); 
+                ctx.fillStyle = "#ffffff"; ctx.fillRect(x * CELL_SIZE + 3, z * CELL_SIZE + 3, 4, CELL_SIZE - 6);
+            } else if (celda.estructura === ESTRUCTURA.CAMA_PIE) {
+                // Pie de cama con sábana desplegada
+                ctx.fillStyle = "#3f51b5"; ctx.fillRect(x * CELL_SIZE, z * CELL_SIZE + 2, CELL_SIZE - 2, CELL_SIZE - 4);
             } else if (celda.estructura === ESTRUCTURA.MESA) {
                 ctx.fillStyle = "#cd853f"; ctx.fillRect(x * CELL_SIZE + 1, z * CELL_SIZE + 1, CELL_SIZE - 2, CELL_SIZE - 2);
             } else if (celda.estructura === ESTRUCTURA.CULTIVO) {
@@ -598,7 +654,7 @@ function renderizarMundo() {
                 if (celda.crecimientoCultivo >= 100) { ctx.fillStyle = "#ffaa00"; ctx.beginPath(); ctx.arc((x*CELL_SIZE)+(CELL_SIZE/2), (z*CELL_SIZE)+(CELL_SIZE/2), 3, 0, Math.PI*2); ctx.fill(); }
             }
 
-            // Zonas y Planos
+            // Marcas y Planos
             if (celda.esZonaExtraccion && celda.estructura === ESTRUCTURA.NINGUNA) {
                 ctx.fillStyle = "rgba(112, 224, 0, 0.15)"; ctx.fillRect(x * CELL_SIZE, z * CELL_SIZE, CELL_SIZE, CELL_SIZE);
             }
@@ -612,7 +668,22 @@ function renderizarMundo() {
         }
     }
 
-    // 2. DIBUJAR ANIMALES
+    // 2. HOLOGRAMA DE VISTA PREVIA (PREVIEW EN TIEMPO REAL)
+    if (!isDragging && modoHerramienta !== 0 && mouseHoverGrid.x >= 0 && mouseHoverGrid.x < WIDTH && mouseHoverGrid.z >= 0 && mouseHoverGrid.z < DEPTH) {
+        let hx = mouseHoverGrid.x, hz = mouseHoverGrid.z;
+        ctx.fillStyle = "rgba(112, 224, 0, 0.35)";
+        ctx.strokeStyle = "#70e000";
+        
+        if (modoHerramienta === 4) { // Preview de Cama de 2 Espacios
+            ctx.fillRect(hx * CELL_SIZE, hz * CELL_SIZE, CELL_SIZE * 2, CELL_SIZE);
+            ctx.strokeRect(hx * CELL_SIZE, hz * CELL_SIZE, CELL_SIZE * 2, CELL_SIZE);
+        } else {
+            ctx.fillRect(hx * CELL_SIZE, hz * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+            ctx.strokeRect(hx * CELL_SIZE, hz * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+        }
+    }
+
+    // 3. ANIMALES
     for (let a of animales) {
         ctx.fillStyle = a.estado === "domesticado" ? "#70e000" : "#d4a373"; 
         ctx.fillRect((a.x * CELL_SIZE) + 2, (a.z * CELL_SIZE) + 4, CELL_SIZE - 4, CELL_SIZE - 6);
@@ -620,7 +691,7 @@ function renderizarMundo() {
         if (a.estado === "domesticando") { ctx.strokeStyle = "#66fcf1"; ctx.strokeRect((a.x * CELL_SIZE), (a.z * CELL_SIZE), CELL_SIZE, CELL_SIZE); }
     }
 
-    // 3. CAJA DE SELECCIÓN (DRAG)
+    // 4. CAJA DE SELECCIÓN (DRAG)
     if (isDragging) {
         let sx = Math.min(dragStart.x, dragCurrent.x) * CELL_SIZE; let sz = Math.min(dragStart.z, dragCurrent.z) * CELL_SIZE;
         let sw = (Math.abs(dragStart.x - dragCurrent.x) + 1) * CELL_SIZE; let sh = (Math.abs(dragStart.z - dragCurrent.z) + 1) * CELL_SIZE;
@@ -628,12 +699,37 @@ function renderizarMundo() {
         ctx.strokeStyle = "#70e000"; ctx.setLineDash([4, 2]); ctx.strokeRect(sx, sz, sw, sh); ctx.setLineDash([]);
     }
 
-    // 4. DIBUJAR COLONOS
+    // 5. COLONOS CON SKINS ÚNICAS (Cuerpo, Cabeza y Pelo)
     for (let c of colonos) {
-        ctx.fillStyle = c.durmiendo ? "#555" : (c === colonoSeleccionado ? "#70e000" : "#ffffff");
-        ctx.beginPath(); ctx.arc((c.x * CELL_SIZE) + (CELL_SIZE/2), (c.z * CELL_SIZE) + (CELL_SIZE/2), CELL_SIZE/2.5, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = c === colonoSeleccionado ? "#ffffff" : "#70e000"; ctx.font = "9px Arial";
-        ctx.fillText(c.nombre, (c.x * CELL_SIZE) - 4, (c.z * CELL_SIZE) - 2);
+        let cx = (c.px * CELL_SIZE) + (CELL_SIZE / 2);
+        let cz = (c.pz * CELL_SIZE) + (CELL_SIZE / 2);
+
+        if (c.durmiendo) {
+            ctx.fillStyle = "#555555";
+            ctx.beginPath(); ctx.arc(cx, cz, CELL_SIZE / 2.5, 0, Math.PI * 2); ctx.fill();
+        } else {
+            // Ropa/Cuerpo
+            ctx.fillStyle = c.skin.ropa;
+            ctx.beginPath(); ctx.arc(cx, cz + 2, CELL_SIZE / 2.5, 0, Math.PI * 2); ctx.fill();
+
+            // Piel/Cabeza
+            ctx.fillStyle = c.skin.piel;
+            ctx.beginPath(); ctx.arc(cx, cz - 1, CELL_SIZE / 3, 0, Math.PI * 2); ctx.fill();
+
+            // Pelo
+            ctx.fillStyle = c.skin.pelo;
+            ctx.beginPath(); ctx.arc(cx, cz - 3, CELL_SIZE / 4, 0, Math.PI * 2); ctx.fill();
+
+            // Anillo de Selección
+            if (c === colonoSeleccionado) {
+                ctx.strokeStyle = "#70e000"; ctx.lineWidth = 1.5;
+                ctx.beginPath(); ctx.arc(cx, cz, CELL_SIZE / 1.8, 0, Math.PI * 2); ctx.stroke();
+                ctx.lineWidth = 1;
+            }
+        }
+
+        ctx.fillStyle = (c === colonoSeleccionado) ? "#ffffff" : "#70e000"; ctx.font = "9px Arial";
+        ctx.fillText(c.nombre, (c.px * CELL_SIZE) - 4, (c.pz * CELL_SIZE) - 4);
     }
 }
 
