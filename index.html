@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AETHEL: RimWorld Green Colony</title>
+    <title>AETHEL</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -29,7 +29,7 @@
         <div class="tool-list">
             <button onclick="setTool(0)" id="tool-0" class="active">0. 👆 Seleccionar (Drag)</button>
             <hr>
-            <button onclick="setTool(1)" id="tool-1">1. ⛏️ Minar / Excavación</button>
+            <button onclick="setTool(1)" id="tool-1">1. ⛏️ Excavación</button>
             <button onclick="setTool(7)" id="tool-7">2. 🔄 Zona Extracción Auto</button>
             <hr>
             <button onclick="setTool(2)" id="tool-2">3. 🧱 Pared (5 Biom)</button>
@@ -58,7 +58,7 @@
         <div class="bar-bg"><div id="insp-hambre" class="bar-fill-hambre" style="width: 100%"></div></div>
 
         <p class="subtitle">Prioridades de Trabajo:</p>
-        <label><input type="checkbox" id="chk-mineria" onchange="toggleJob('mineria')"> ⛏️ Minería / Excavación</label><br>
+        <label><input type="checkbox" id="chk-mineria" onchange="toggleJob('mineria')"> ⛏️ Excavación</label><br>
         <label><input type="checkbox" id="chk-caza" onchange="toggleJob('caza')"> 🏹 Caza</label><br>
         <label><input type="checkbox" id="chk-construccion" onchange="toggleJob('construccion')"> 🧱 Construcción</label><br>
         <label><input type="checkbox" id="chk-agricultura" onchange="toggleJob('agricultura')"> 🌱 Agricultura</label><br>
