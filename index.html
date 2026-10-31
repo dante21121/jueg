@@ -3,26 +3,56 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AETHEL: RimWorld Edition</title>
+    <title>AETHEL: Colony Simulator</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div id="night-overlay"></div>
 
-    <div id="ui-layer">
-        <h2>AETHEL: Colonia</h2>
-        <div class="stats">
-            <p>Día: <span id="ui-dia" class="highlight">1</span> | Hora: <span id="ui-hora" class="highlight">06:00</span></p>
-            <p>Recursos: <span id="ui-biomasa" style="color: #a0e6ff; font-weight: bold;">0 Biomasa</span> | <span id="ui-comida" style="color: #ffaa00; font-weight: bold;">10 Comida</span></p>
-            <hr>
-            <p><strong>Herramienta (ESPACIO para cambiar)</strong></p>
-            <p><span id="tool-mode" class="highlight">1. Extraer (Minar Tejido)</span></p>
-            <hr>
-            <div id="colono-list">
-                <!-- Se llenará dinámicamente por JS -->
-            </div>
+    <!-- Panel Superior: Controles de Tiempo y Recursos -->
+    <div id="top-bar">
+        <div class="time-controls">
+            <button id="btn-pause" onclick="setSpeed(0)">⏸ (Espacio)</button>
+            <button id="btn-1x" onclick="setSpeed(1)">▶ 1x (1)</button>
+            <button id="btn-2x" onclick="setSpeed(2)">▶▶ 2x (2)</button>
+            <button id="btn-4x" onclick="setSpeed(4)">▶▶▶ 4x (3)</button>
+            <span style="margin-left: 15px;">Día: <span id="ui-dia" class="highlight">1</span> | <span id="ui-hora" class="highlight">06:00</span></span>
+        </div>
+        <div class="resources">
+            Biomasa: <span id="ui-biomasa" style="color:#a0e6ff;">0</span> | Comida: <span id="ui-comida" style="color:#ffaa00;">10</span>
         </div>
     </div>
+
+    <!-- Panel Izquierdo: Herramientas -->
+    <div id="tools-layer">
+        <h2>Herramientas</h2>
+        <div class="tool-list">
+            <button onclick="setTool(0)" id="tool-0" class="active">0. 👆 Seleccionar Colono</button>
+            <button onclick="setTool(1)" id="tool-1">1. ⛏️ Minar/Extraer</button>
+            <button onclick="setTool(2)" id="tool-2">2. 🧱 Pared (5 Biom)</button>
+            <button onclick="setTool(3)" id="tool-3">3. 🚪 Puerta (3 Biom)</button>
+            <button onclick="setTool(4)" id="tool-4">4. 🛏️ Cama (10 Biom)</button>
+            <button onclick="setTool(5)" id="tool-5">5. 🛠️ Mesa Trab. (15 Biom)</button>
+        </div>
+        <hr>
+        <p>Población total: <span id="ui-poblacion" class="highlight">3</span></p>
+    </div>
+
+    <!-- Panel Derecho: Inspector de Colono -->
+    <div id="inspector-layer" style="display: none;">
+        <h2 id="insp-nombre">Nombre</h2>
+        <p>Edad: <span id="insp-edad">20</span> | Pareja: <span id="insp-pareja">Ninguna</span></p>
+        <p>Estado: <span id="insp-estado" class="highlight">Vagando</span></p>
+        
+        <p class="subtitle">Necesidades:</p>
+        <div class="bar-bg"><div id="insp-energia" class="bar-fill-energia" style="width: 100%"></div></div>
+        <div class="bar-bg"><div id="insp-hambre" class="bar-fill-hambre" style="width: 100%"></div></div>
+
+        <p class="subtitle">Trabajos Permitidos:</p>
+        <label><input type="checkbox" id="chk-mineria" onchange="toggleJob('mineria')"> Minería / Extracción</label><br>
+        <label><input type="checkbox" id="chk-construccion" onchange="toggleJob('construccion')"> Construcción</label>
+    </div>
+
     <canvas id="gameCanvas"></canvas>
     <script src="game.js"></script>
 </body>
