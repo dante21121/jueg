@@ -22,7 +22,6 @@ let isDragging = false;
 let dragStart = {x: -1, z: -1}, dragCurrent = {x: -1, z: -1};
 let mouseHoverGrid = {x: -1, z: -1};
 
-// Generación de terreno verde estilizado
 function generarTerreno() {
     for (let x = 0; x < WIDTH; x++) {
         grid[x] = [];
@@ -48,7 +47,7 @@ function generarTerreno() {
                 regeneracionBiomasa: 100, 
                 esZonaExtraccion: false,
                 hasPiso: false,
-                asignadoA: null // ID del colono dueño de la cama
+                asignadoA: null 
             };
         }
     }
@@ -125,7 +124,7 @@ function detectarHabitaciones(startX, startZ) {
     }
 }
 
-// --- COLONOS CON SKINS Y MOVIMIENTO FLUIDO (PX/PZ) ---
+// --- COLONOS (VELOCIDAD AUMENTADA A 0.50) ---
 let colonos = [];
 let colonoSeleccionado = null;
 const NOMBRES = ["Val", "Kael", "Rye", "Jace", "Lyra", "Sion", "Tess"];
@@ -138,8 +137,8 @@ function crearColono(x, z, edad) {
         id: idCounter++, 
         nombre: NOMBRES[Math.floor(Math.random() * NOMBRES.length)],
         x: x, z: z, 
-        px: x, pz: z, // Posición flotante continua (Movimiento fluido)
-        velocidad: 0.40, // Píxeles/Tiles por frame
+        px: x, pz: z, 
+        velocidad: 0.50, // Velocidad incrementada a 0.50
         edad: edad, 
         energia: 100, hambre: 100,
         estadoTxt: "Vagando", 
@@ -161,7 +160,6 @@ function crearColono(x, z, edad) {
 
 // --- SIMULACIÓN E IA ---
 function procesarColonos() {
-    // 1. Crecimiento vegetación y cultivos
     for (let x = 0; x < WIDTH; x++) {
         for (let z = 0; z < DEPTH; z++) {
             let celda = grid[x][z];
@@ -185,7 +183,6 @@ function procesarColonos() {
         }
     }
 
-    // 2. Animales
     for (let anim of animales) {
         if (Math.random() < 0.1) {
             let nx = anim.x + (Math.floor(Math.random() * 3) - 1);
@@ -196,7 +193,6 @@ function procesarColonos() {
         }
     }
 
-    // 3. IA Colonos
     let modoActual = horarioGlobal[reloj.hora]; 
 
     for (let colono of colonos) {
@@ -215,7 +211,6 @@ function procesarColonos() {
             }
         } else colono.ticksEnTarea = 0;
 
-        // Necesidades
         let fuerzaDormir = (colono.energia < 20) || (modoActual === 0 && colono.energia < 95);
         if (fuerzaDormir && !colono.tareaActual?.esCritica && !colono.durmiendo) {
             buscarOCrearCamaPropia(colono);
@@ -223,14 +218,12 @@ function procesarColonos() {
             asignarTareaComer(colono);
         }
 
-        // Ocio
         if (modoActual === 2 && colono.tareaActual && !colono.tareaActual.esCritica) {
             if (colono.tareaActual.tipo !== "CAZAR" && colono.tareaActual.tipo !== "DOMESTICAR") {
                 tareasGlobales.push(colono.tareaActual); colono.tareaActual = null; colono.rutaActual = [];
             }
         }
 
-        // Buscar Trabajo
         if (!colono.tareaActual && tareasGlobales.length > 0 && !colono.durmiendo && modoActual === 1) {
             for (let i = 0; i < tareasGlobales.length; i++) {
                 let tarea = tareasGlobales[i];
@@ -249,10 +242,8 @@ function procesarColonos() {
             }
         }
 
-        // Desplazamiento fluido continuo por fotograma
         moverColonoFluido(colono);
 
-        // Vagabundeo Activo
         if (!colono.tareaActual && !colono.durmiendo && colono.rutaActual.length === 0) {
             colono.estadoTxt = (modoActual === 2) ? "Recreación (Ocio)" : "Vagando";
             if (Math.random() < 0.25) { 
@@ -274,7 +265,6 @@ function procesarColonos() {
     actualizarInspectorUI();
 }
 
-// MOTOR DE MOVIMIENTO FLUIDO (PX / PZ)
 function moverColonoFluido(c) {
     if (c.rutaActual.length > 0) {
         let target = c.rutaActual[0];
@@ -287,7 +277,7 @@ function moverColonoFluido(c) {
             c.x = target.x; c.z = target.z;
             c.rutaActual.shift();
             
-            if (c.rutaActual.length === 0) ejecutarTarea(c);
+            if (c.rutaActual.length === 0 && c.tareaActual) ejecutarTarea(c);
         } else {
             c.px += (dx / dist) * c.velocidad;
             c.pz += (dz / dist) * c.velocidad;
@@ -296,7 +286,6 @@ function moverColonoFluido(c) {
     }
 }
 
-// ASIGNACIÓN INDIVIDUAL DE CAMAS (2 TILES)
 function buscarOCrearCamaPropia(c) {
     if (c.camaAsignada) {
         let bedCelda = grid[c.camaAsignada.x]?.[c.camaAsignada.z];
@@ -330,8 +319,11 @@ function asignarTareaComer(c) {
     setTimeout(() => { c.tareaActual = null; }, 1000 / (gameSpeed === 0 ? 1 : gameSpeed));
 }
 
+// CORRECCIÓN DEL CRASH: VALIDACIÓN INICIAL if (!t) return;
 function ejecutarTarea(c) {
     let t = c.tareaActual;
+    if (!t) return; // Evita error Cannot read properties of null (reading 'tipo')
+
     let costo = COSTOS[t.tipo] || 0;
     if (costo > 0 && recursos.biomasa < costo) { tareasGlobales.push(t); c.tareaActual = null; return; }
 
@@ -348,42 +340,43 @@ function ejecutarTarea(c) {
             recursos.comida -= 2; c.estadoTxt = "Domesticando";
             if (Math.random() < 0.35) anim.estado = "domesticado"; else anim.estado = "salvaje";
         }
-    } else {
+    } else if (t.x !== undefined && t.z !== undefined) {
         let celda = grid[t.x][t.z];
-        if (t.tipo === "MINAR") {
-            celda.plano = BLUEPRINT.NINGUNO; celda.regeneracionBiomasa = 0; celda.tieneArbol = false; recursos.biomasa += 4;
-        } 
-        else if (t.tipo === "DESTRUIR") {
-            celda.plano = BLUEPRINT.NINGUNO; 
-            if ((celda.estructura === ESTRUCTURA.CAMA_CABECERA || celda.estructura === ESTRUCTURA.CAMA_PIE) && celda.asignadoA) {
-                let colOwner = colonos.find(co => co.id === celda.asignadoA);
-                if (colOwner) colOwner.camaAsignada = null;
-            }
-            celda.estructura = ESTRUCTURA.NINGUNA; celda.caminable = true; celda.hasPiso = false; celda.asignadoA = null;
-            recursos.biomasa += 2; 
-        }
-        else if (t.tipo === "COSECHAR") {
-            celda.plano = BLUEPRINT.NINGUNO; celda.crecimientoCultivo = 0; recursos.comida += 4;
-        }
-        else if (t.tipo.startsWith("CONSTRUIR")) {
-            recursos.biomasa -= costo; celda.plano = BLUEPRINT.NINGUNO;
-            if (t.tipo === "CONSTRUIR_PARED") { celda.estructura = ESTRUCTURA.PARED; celda.caminable = false; celda.tieneArbol = false; }
-            if (t.tipo === "CONSTRUIR_PUERTA") { celda.estructura = ESTRUCTURA.PUERTA; celda.tieneArbol = false; }
-            if (t.tipo === "CONSTRUIR_CAMA") {
-                // CAMA DE 2 TILES: Cabecera (Tile X) + Pie (Tile X+1)
-                celda.estructura = ESTRUCTURA.CAMA_CABECERA; celda.tieneArbol = false;
-                if (grid[t.x+1]?.[t.z]) {
-                    grid[t.x+1][t.z].estructura = ESTRUCTURA.CAMA_PIE;
-                    grid[t.x+1][t.z].plano = BLUEPRINT.NINGUNO;
-                    grid[t.x+1][t.z].tieneArbol = false;
+        if (celda) {
+            if (t.tipo === "MINAR") {
+                celda.plano = BLUEPRINT.NINGUNO; celda.regeneracionBiomasa = 0; celda.tieneArbol = false; recursos.biomasa += 4;
+            } 
+            else if (t.tipo === "DESTRUIR") {
+                celda.plano = BLUEPRINT.NINGUNO; 
+                if ((celda.estructura === ESTRUCTURA.CAMA_CABECERA || celda.estructura === ESTRUCTURA.CAMA_PIE) && celda.asignadoA) {
+                    let colOwner = colonos.find(co => co.id === celda.asignadoA);
+                    if (colOwner) colOwner.camaAsignada = null;
                 }
+                celda.estructura = ESTRUCTURA.NINGUNA; celda.caminable = true; celda.hasPiso = false; celda.asignadoA = null;
+                recursos.biomasa += 2; 
             }
-            if (t.tipo === "CONSTRUIR_MESA") { celda.estructura = ESTRUCTURA.MESA; celda.caminable = false; celda.tieneArbol = false; }
-            if (t.tipo === "CONSTRUIR_CULTIVO") { celda.estructura = ESTRUCTURA.CULTIVO; celda.crecimientoCultivo = 0; celda.tieneArbol = false; }
-            
-            if (t.tipo === "CONSTRUIR_PARED" || t.tipo === "CONSTRUIR_PUERTA") {
-                let adjFree = [{x:1,z:0},{x:-1,z:0},{x:0,z:1},{x:0,z:-1}].find(d => grid[t.x+d.x]?.[t.z+d.z]?.caminable);
-                if (adjFree) detectarHabitaciones(t.x+adjFree.x, t.z+adjFree.z);
+            else if (t.tipo === "COSECHAR") {
+                celda.plano = BLUEPRINT.NINGUNO; celda.crecimientoCultivo = 0; recursos.comida += 4;
+            }
+            else if (t.tipo.startsWith("CONSTRUIR")) {
+                recursos.biomasa -= costo; celda.plano = BLUEPRINT.NINGUNO;
+                if (t.tipo === "CONSTRUIR_PARED") { celda.estructura = ESTRUCTURA.PARED; celda.caminable = false; celda.tieneArbol = false; }
+                if (t.tipo === "CONSTRUIR_PUERTA") { celda.estructura = ESTRUCTURA.PUERTA; celda.tieneArbol = false; }
+                if (t.tipo === "CONSTRUIR_CAMA") {
+                    celda.estructura = ESTRUCTURA.CAMA_CABECERA; celda.tieneArbol = false;
+                    if (grid[t.x+1]?.[t.z]) {
+                        grid[t.x+1][t.z].estructura = ESTRUCTURA.CAMA_PIE;
+                        grid[t.x+1][t.z].plano = BLUEPRINT.NINGUNO;
+                        grid[t.x+1][t.z].tieneArbol = false;
+                    }
+                }
+                if (t.tipo === "CONSTRUIR_MESA") { celda.estructura = ESTRUCTURA.MESA; celda.caminable = false; celda.tieneArbol = false; }
+                if (t.tipo === "CONSTRUIR_CULTIVO") { celda.estructura = ESTRUCTURA.CULTIVO; celda.crecimientoCultivo = 0; celda.tieneArbol = false; }
+                
+                if (t.tipo === "CONSTRUIR_PARED" || t.tipo === "CONSTRUIR_PUERTA") {
+                    let adjFree = [{x:1,z:0},{x:-1,z:0},{x:0,z:1},{x:0,z:-1}].find(d => grid[t.x+d.x]?.[t.z+d.z]?.caminable);
+                    if (adjFree) detectarHabitaciones(t.x+adjFree.x, t.z+adjFree.z);
+                }
             }
         }
     }
@@ -538,7 +531,6 @@ function aplicarHerramientaCelda(mx, mz) {
         if (modoHerramienta === 2) { celda.plano = BLUEPRINT.CONSTRUIR_PARED; tareasGlobales.push({ tipo: "CONSTRUIR_PARED", req: "construccion", x: mx, z: mz }); }
         if (modoHerramienta === 3) { celda.plano = BLUEPRINT.CONSTRUIR_PUERTA; tareasGlobales.push({ tipo: "CONSTRUIR_PUERTA", req: "construccion", x: mx, z: mz }); }
         if (modoHerramienta === 4) { 
-            // CAMA DE 2 TILES: Valida celda actual y la siguiente (X+1)
             if (mx + 1 < WIDTH && grid[mx+1][mz].estructura === ESTRUCTURA.NINGUNA) {
                 celda.plano = BLUEPRINT.CONSTRUIR_CAMA; 
                 grid[mx+1][mz].plano = BLUEPRINT.CONSTRUIR_CAMA;
@@ -586,7 +578,7 @@ function gameLoop(currentTime) {
         tickLogica += (deltaTime * gameSpeed);
         if (tickLogica >= 120) { 
             tickLogica -= 120;
-            reloj.minutos += 5; // El tiempo avanza más relajado
+            reloj.minutos += 5; 
             if (reloj.minutos >= 60) {
                 reloj.minutos = 0; reloj.hora += 1;
                 colonos.forEach(c => c.edad += 0.005); 
@@ -621,30 +613,25 @@ function renderizarMundo() {
 
             ctx.fillRect(x * CELL_SIZE, z * CELL_SIZE, CELL_SIZE, CELL_SIZE);
 
-            // Pisos de Madera se dibujan DEBAJO de todas las estructuras
             if (celda.hasPiso) {
                 ctx.fillStyle = "#b07d4f"; ctx.fillRect(x * CELL_SIZE, z * CELL_SIZE, CELL_SIZE, CELL_SIZE);
                 ctx.strokeStyle = "#8d5b30"; ctx.strokeRect(x * CELL_SIZE, z * CELL_SIZE, CELL_SIZE, CELL_SIZE);
             }
 
-            // Árboles
             if (celda.tieneArbol && celda.estructura === ESTRUCTURA.NINGUNA && celda.regeneracionBiomasa === 100) {
                 ctx.fillStyle = "#2d4a22"; ctx.beginPath(); 
                 ctx.arc((x*CELL_SIZE)+(CELL_SIZE/2), (z*CELL_SIZE)+(CELL_SIZE/2), 4, 0, Math.PI*2); ctx.fill();
             }
 
-            // Estructuras
             if (celda.estructura === ESTRUCTURA.PARED) {
                 ctx.fillStyle = "#5a6577"; ctx.fillRect(x * CELL_SIZE, z * CELL_SIZE, CELL_SIZE, CELL_SIZE);
                 ctx.strokeStyle = "#2b323d"; ctx.strokeRect(x * CELL_SIZE, z * CELL_SIZE, CELL_SIZE, CELL_SIZE);
             } else if (celda.estructura === ESTRUCTURA.PUERTA) {
                 ctx.fillStyle = "#b07d4f"; ctx.fillRect(x * CELL_SIZE + 3, z * CELL_SIZE + 3, CELL_SIZE - 6, CELL_SIZE - 6);
             } else if (celda.estructura === ESTRUCTURA.CAMA_CABECERA) {
-                // Almohada Blanca + Sábana Azul
                 ctx.fillStyle = "#3f51b5"; ctx.fillRect(x * CELL_SIZE + 2, z * CELL_SIZE + 2, CELL_SIZE - 2, CELL_SIZE - 4); 
                 ctx.fillStyle = "#ffffff"; ctx.fillRect(x * CELL_SIZE + 3, z * CELL_SIZE + 3, 4, CELL_SIZE - 6);
             } else if (celda.estructura === ESTRUCTURA.CAMA_PIE) {
-                // Pie de cama con sábana desplegada
                 ctx.fillStyle = "#3f51b5"; ctx.fillRect(x * CELL_SIZE, z * CELL_SIZE + 2, CELL_SIZE - 2, CELL_SIZE - 4);
             } else if (celda.estructura === ESTRUCTURA.MESA) {
                 ctx.fillStyle = "#cd853f"; ctx.fillRect(x * CELL_SIZE + 1, z * CELL_SIZE + 1, CELL_SIZE - 2, CELL_SIZE - 2);
@@ -654,7 +641,6 @@ function renderizarMundo() {
                 if (celda.crecimientoCultivo >= 100) { ctx.fillStyle = "#ffaa00"; ctx.beginPath(); ctx.arc((x*CELL_SIZE)+(CELL_SIZE/2), (z*CELL_SIZE)+(CELL_SIZE/2), 3, 0, Math.PI*2); ctx.fill(); }
             }
 
-            // Marcas y Planos
             if (celda.esZonaExtraccion && celda.estructura === ESTRUCTURA.NINGUNA) {
                 ctx.fillStyle = "rgba(112, 224, 0, 0.15)"; ctx.fillRect(x * CELL_SIZE, z * CELL_SIZE, CELL_SIZE, CELL_SIZE);
             }
@@ -668,13 +654,13 @@ function renderizarMundo() {
         }
     }
 
-    // 2. HOLOGRAMA DE VISTA PREVIA (PREVIEW EN TIEMPO REAL)
+    // 2. PREVIEW EN TIEMPO REAL
     if (!isDragging && modoHerramienta !== 0 && mouseHoverGrid.x >= 0 && mouseHoverGrid.x < WIDTH && mouseHoverGrid.z >= 0 && mouseHoverGrid.z < DEPTH) {
         let hx = mouseHoverGrid.x, hz = mouseHoverGrid.z;
         ctx.fillStyle = "rgba(112, 224, 0, 0.35)";
         ctx.strokeStyle = "#70e000";
         
-        if (modoHerramienta === 4) { // Preview de Cama de 2 Espacios
+        if (modoHerramienta === 4) {
             ctx.fillRect(hx * CELL_SIZE, hz * CELL_SIZE, CELL_SIZE * 2, CELL_SIZE);
             ctx.strokeRect(hx * CELL_SIZE, hz * CELL_SIZE, CELL_SIZE * 2, CELL_SIZE);
         } else {
@@ -691,7 +677,7 @@ function renderizarMundo() {
         if (a.estado === "domesticando") { ctx.strokeStyle = "#66fcf1"; ctx.strokeRect((a.x * CELL_SIZE), (a.z * CELL_SIZE), CELL_SIZE, CELL_SIZE); }
     }
 
-    // 4. CAJA DE SELECCIÓN (DRAG)
+    // 4. SELECCIÓN ARRASTRE
     if (isDragging) {
         let sx = Math.min(dragStart.x, dragCurrent.x) * CELL_SIZE; let sz = Math.min(dragStart.z, dragCurrent.z) * CELL_SIZE;
         let sw = (Math.abs(dragStart.x - dragCurrent.x) + 1) * CELL_SIZE; let sh = (Math.abs(dragStart.z - dragCurrent.z) + 1) * CELL_SIZE;
@@ -699,7 +685,7 @@ function renderizarMundo() {
         ctx.strokeStyle = "#70e000"; ctx.setLineDash([4, 2]); ctx.strokeRect(sx, sz, sw, sh); ctx.setLineDash([]);
     }
 
-    // 5. COLONOS CON SKINS ÚNICAS (Cuerpo, Cabeza y Pelo)
+    // 5. COLONOS CON FLUIDEZ
     for (let c of colonos) {
         let cx = (c.px * CELL_SIZE) + (CELL_SIZE / 2);
         let cz = (c.pz * CELL_SIZE) + (CELL_SIZE / 2);
@@ -708,19 +694,15 @@ function renderizarMundo() {
             ctx.fillStyle = "#555555";
             ctx.beginPath(); ctx.arc(cx, cz, CELL_SIZE / 2.5, 0, Math.PI * 2); ctx.fill();
         } else {
-            // Ropa/Cuerpo
             ctx.fillStyle = c.skin.ropa;
             ctx.beginPath(); ctx.arc(cx, cz + 2, CELL_SIZE / 2.5, 0, Math.PI * 2); ctx.fill();
 
-            // Piel/Cabeza
             ctx.fillStyle = c.skin.piel;
             ctx.beginPath(); ctx.arc(cx, cz - 1, CELL_SIZE / 3, 0, Math.PI * 2); ctx.fill();
 
-            // Pelo
             ctx.fillStyle = c.skin.pelo;
             ctx.beginPath(); ctx.arc(cx, cz - 3, CELL_SIZE / 4, 0, Math.PI * 2); ctx.fill();
 
-            // Anillo de Selección
             if (c === colonoSeleccionado) {
                 ctx.strokeStyle = "#70e000"; ctx.lineWidth = 1.5;
                 ctx.beginPath(); ctx.arc(cx, cz, CELL_SIZE / 1.8, 0, Math.PI * 2); ctx.stroke();
