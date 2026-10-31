@@ -19,17 +19,17 @@ body {
 
 #tools-layer {
     position: absolute; top: 50px; left: 10px; background: var(--ui-bg); padding: 15px;
-    border: 1px solid var(--border-color); border-radius: 4px; width: 230px; z-index: 10;
+    border: 1px solid var(--border-color); border-radius: 4px; width: 240px; z-index: 10;
 }
 .tool-list button {
-    display: block; width: 100%; padding: 6px; margin-bottom: 4px; font-size: 0.85rem;
+    display: block; width: 100%; padding: 6px; margin-bottom: 4px; font-size: 0.82rem;
     background: #111; color: var(--text-main); border: 1px solid #333; text-align: left; cursor: pointer;
 }
 .tool-list button.active { background: #8a2b3b; border-color: #ff4c4c; font-weight: bold; color: white;}
 
 #inspector-layer {
     position: absolute; top: 50px; right: 10px; background: var(--ui-bg); padding: 15px;
-    border: 1px solid var(--border-color); border-radius: 4px; width: 250px; z-index: 10;
+    border: 1px solid var(--border-color); border-radius: 4px; width: 260px; z-index: 10;
 }
 h2 { margin: 0 0 10px 0; font-size: 1.1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 5px; }
 p { margin: 5px 0; font-size: 0.85rem; }
