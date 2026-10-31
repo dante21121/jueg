@@ -3,13 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AETHEL: Colony Simulator</title>
+    <title>AETHEL: RimWorld Edition - Enhanced</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div id="night-overlay"></div>
 
-    <!-- Panel Superior -->
     <div id="top-bar">
         <div class="time-controls">
             <button id="btn-pause" onclick="setSpeed(0)">⏸ (Espacio)</button>
@@ -19,32 +18,32 @@
             <span style="margin-left: 15px;">Día: <span id="ui-dia" class="highlight">1</span> | <span id="ui-hora" class="highlight">06:00</span></span>
         </div>
         <div class="resources">
-            Biomasa: <span id="ui-biomasa" style="color:#a0e6ff;">0</span> | Comida: <span id="ui-comida" style="color:#ffaa00;">10</span>
+            Biomasa: <span id="ui-biomasa" style="color:#a0e6ff;">0</span> | Comida: <span id="ui-comida" style="color:#ffaa00;">20</span>
         </div>
     </div>
 
-    <!-- Panel Izquierdo: Herramientas -->
     <div id="tools-layer">
         <h2>Herramientas</h2>
         <div class="tool-list">
-            <button onclick="setTool(0)" id="tool-0" class="active">0. 👆 Seleccionar Colono</button>
-            <button onclick="setTool(1)" id="tool-1">1. ⛏️ Minar/Extraer (Área)</button>
+            <button onclick="setTool(0)" id="tool-0" class="active">0. 👆 Seleccionar / Marcar Zona</button>
+            <button onclick="setTool(1)" id="tool-1">1. ⛏️ Extraer Biomasa (Área)</button>
             <button onclick="setTool(2)" id="tool-2">2. 🧱 Pared (5 Biom)</button>
             <button onclick="setTool(3)" id="tool-3">3. 🚪 Puerta (3 Biom)</button>
             <button onclick="setTool(4)" id="tool-4">4. 🛏️ Cama (10 Biom)</button>
             <button onclick="setTool(5)" id="tool-5">5. 🛠️ Mesa Trab. (15 Biom)</button>
-            <button onclick="setTool(7)" id="tool-7">7. 🌱 Cultivo (1 Biom)</button>
+            <button onclick="setTool(7)" id="tool-7">7. 🌱 Zona Cultivo (1 Biom)</button>
+            <button onclick="setTool(8)" id="tool-8">8. 🪓 Zona Tala Automática</button>
             <hr>
             <button onclick="setTool(6)" id="tool-6" style="color: #ff4c4c;">6. ❌ Cancelar / Demoler</button>
         </div>
         <p>Población total: <span id="ui-poblacion" class="highlight">3</span></p>
     </div>
 
-    <!-- Panel Derecho: Inspector de Colono -->
     <div id="inspector-layer" style="display: none;">
         <h2 id="insp-nombre">Nombre</h2>
         <p>Edad: <span id="insp-edad">20</span> | Pareja: <span id="insp-pareja">Ninguna</span></p>
         <p>Estado: <span id="insp-estado" class="highlight">Vagando</span></p>
+        <p>Mascota: <span id="insp-mascota" class="highlight">Ninguna</span></p>
         
         <p class="subtitle">Necesidades:</p>
         <div class="bar-bg"><div id="insp-energia" class="bar-fill-energia" style="width: 100%"></div></div>
@@ -53,7 +52,8 @@
         <p class="subtitle">Trabajos Permitidos:</p>
         <label><input type="checkbox" id="chk-mineria" onchange="toggleJob('mineria')"> Minería / Extracción</label><br>
         <label><input type="checkbox" id="chk-construccion" onchange="toggleJob('construccion')"> Construcción</label><br>
-        <label><input type="checkbox" id="chk-agricultura" onchange="toggleJob('agricultura')"> Agricultura</label>
+        <label><input type="checkbox" id="chk-agricultura" onchange="toggleJob('agricultura')"> Agricultura</label><br>
+        <label><input type="checkbox" id="chk-adiestramiento" onchange="toggleJob('adiestramiento')"> Adiestramiento</label>
     </div>
 
     <canvas id="gameCanvas"></canvas>
