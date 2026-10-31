@@ -9,7 +9,7 @@
 <body>
     <div id="night-overlay"></div>
 
-    <!-- Panel Superior: Tiempo, Recursos y Barra de Colonos (Skins) -->
+    <!-- Panel Superior: Tiempo, Recursos y Barra de Colonos -->
     <div id="top-bar">
         <div class="time-controls">
             <button id="btn-pause" onclick="setSpeed(0)">⏸ (Espacio)</button>
@@ -19,7 +19,6 @@
             <span class="clock-display">Día: <span id="ui-dia" class="highlight">1</span> | <span id="ui-hora" class="highlight">06:00</span></span>
         </div>
 
-        <!-- Selector Rápido de Colonos (Retratos con Skins) -->
         <div id="colonist-bar"></div>
 
         <div class="resources">
@@ -38,12 +37,12 @@
         <div id="cat-construccion" class="sub-menu">
             <button onclick="setTool(2)" id="tool-2">🧱 Pared (5 Biom)</button>
             <button onclick="setTool(3)" id="tool-3">🚪 Puerta (3 Biom)</button>
-            <button onclick="setTool(4)" id="tool-4">🛏️ Cama (10 Biom)</button>
-            <button onclick="setTool(5)" id="tool-5">🛠️ Mesa De Trabajo (15 Biom)</button>
+            <button onclick="setTool(4)" id="tool-4">🛏️ Cama Doble Tile (10 Biom)</button>
+            <button onclick="setTool(5)" id="tool-5">🛠️ Mesa Trab. (15 Biom)</button>
         </div>
 
         <!-- Categoría: Zonas y Campo -->
-        <button class="category-btn" onclick="toggleCategory('cat-zonas')">🌾 Zonas ▾</button>
+        <button class="category-btn" onclick="toggleCategory('cat-zonas')">🌾 Zonas y Campo ▾</button>
         <div id="cat-zonas" class="sub-menu">
             <button onclick="setTool(1)" id="tool-1">⛏️ Excavación</button>
             <button onclick="setTool(7)" id="tool-7">🔄 Zona Extracción Auto</button>
