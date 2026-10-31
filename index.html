@@ -38,14 +38,14 @@
         <div id="cat-construccion" class="sub-menu">
             <button onclick="setTool(2)" id="tool-2">🧱 Pared (5 Biom)</button>
             <button onclick="setTool(3)" id="tool-3">🚪 Puerta (3 Biom)</button>
-            <button onclick="setTool(4)" id="tool-4">🛏️ Cama Doble Tile (10 Biom)</button>
-            <button onclick="setTool(5)" id="tool-5">🛠️ Mesa Trab. (15 Biom)</button>
+            <button onclick="setTool(4)" id="tool-4">🛏️ Cama (10 Biom)</button>
+            <button onclick="setTool(5)" id="tool-5">🛠️ Mesa De Trabajo (15 Biom)</button>
         </div>
 
         <!-- Categoría: Zonas y Campo -->
-        <button class="category-btn" onclick="toggleCategory('cat-zonas')">🌾 Zonas y Campo ▾</button>
+        <button class="category-btn" onclick="toggleCategory('cat-zonas')">🌾 Zonas ▾</button>
         <div id="cat-zonas" class="sub-menu">
-            <button onclick="setTool(1)" id="tool-1">⛏️ Minar / Excavación</button>
+            <button onclick="setTool(1)" id="tool-1">⛏️ Excavación</button>
             <button onclick="setTool(7)" id="tool-7">🔄 Zona Extracción Auto</button>
             <button onclick="setTool(6)" id="tool-6">🌱 Zona de Cultivo</button>
         </div>
@@ -77,7 +77,7 @@
         <div class="bar-bg"><div id="insp-hambre" class="bar-fill-hambre" style="width: 100%"></div></div>
 
         <p class="subtitle">Prioridades de Trabajo:</p>
-        <label><input type="checkbox" id="chk-mineria" onchange="toggleJob('mineria')"> ⛏️ Minería / Excavación</label><br>
+        <label><input type="checkbox" id="chk-mineria" onchange="toggleJob('mineria')"> ⛏️ Excavación</label><br>
         <label><input type="checkbox" id="chk-caza" onchange="toggleJob('caza')"> 🏹 Caza</label><br>
         <label><input type="checkbox" id="chk-construccion" onchange="toggleJob('construccion')"> 🧱 Construcción</label><br>
         <label><input type="checkbox" id="chk-agricultura" onchange="toggleJob('agricultura')"> 🌱 Agricultura</label><br>
