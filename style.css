@@ -9,32 +9,40 @@
 body {
     margin: 0; padding: 0; background-color: var(--bg-color); color: var(--text-main);
     font-family: 'Courier New', Courier, monospace; overflow: hidden;
-    display: flex; justify-content: center; align-items: center; height: 100vh;
 }
 
-#ui-layer {
-    position: absolute; top: 20px; left: 20px; background: var(--ui-bg); padding: 15px;
-    border: 1px solid var(--border-color); border-radius: 4px; z-index: 10; width: 280px;
+/* Barras y Paneles */
+#top-bar {
+    position: absolute; top: 0; left: 0; width: 100%; background: var(--ui-bg);
+    border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between;
+    padding: 10px 20px; box-sizing: border-box; z-index: 10; font-size: 0.9rem;
 }
+.time-controls button { background: #1f2833; color: white; border: 1px solid var(--border-color); padding: 5px 10px; cursor: pointer; }
+.time-controls button.active { background: #45a29e; color: black; font-weight: bold; }
 
-h2 { margin-top: 0; font-size: 1.1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; }
-.stats p { margin: 6px 0; font-size: 0.9rem; }
-.highlight { color: var(--text-highlight); font-weight: bold; }
-hr { border: 0.5px solid var(--border-color); margin: 10px 0; opacity: 0.3; }
-
-/* Lista de Colonos (RimWorld Style) */
-#colono-list { max-height: 300px; overflow-y: auto; }
-.colono-card {
-    background: rgba(0, 0, 0, 0.5); border-left: 3px solid var(--text-highlight);
-    padding: 8px; margin-bottom: 5px; font-size: 0.8rem;
+#tools-layer {
+    position: absolute; top: 50px; left: 10px; background: var(--ui-bg); padding: 15px;
+    border: 1px solid var(--border-color); border-radius: 4px; width: 220px; z-index: 10;
 }
-.bar-bg { width: 100%; background: #333; height: 6px; margin-top: 4px; }
-.bar-fill-energia { background: #4caf50; height: 100%; }
-.bar-fill-hambre { background: #ff9800; height: 100%; }
+.tool-list button {
+    display: block; width: 100%; padding: 8px; margin-bottom: 5px;
+    background: #111; color: var(--text-main); border: 1px solid #333; text-align: left; cursor: pointer;
+}
+.tool-list button.active { background: #8a2b3b; border-color: #ff4c4c; font-weight: bold; }
 
-canvas { border: 2px solid #1f2833; background-color: #000; }
+#inspector-layer {
+    position: absolute; top: 50px; right: 10px; background: var(--ui-bg); padding: 15px;
+    border: 1px solid var(--border-color); border-radius: 4px; width: 250px; z-index: 10;
+}
+h2 { margin: 0 0 10px 0; font-size: 1.1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 5px; }
+p { margin: 5px 0; font-size: 0.85rem; }
+.subtitle { font-weight: bold; margin-top: 15px; color: var(--text-highlight); }
+.bar-bg { width: 100%; background: #333; height: 8px; margin-bottom: 5px; }
+.bar-fill-energia { background: #4caf50; height: 100%; transition: width 0.2s; }
+.bar-fill-hambre { background: #ff9800; height: 100%; transition: width 0.2s; }
 
-/* Ciclo de Día y Noche */
+canvas { display: block; margin: 50px auto 0 auto; border: 2px solid #1f2833; }
+
 #night-overlay {
     position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
     background: rgba(0, 5, 20, 0.85); pointer-events: none; z-index: 5;
