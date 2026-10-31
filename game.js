@@ -5,10 +5,10 @@ const CELL_SIZE = 12;
 
 const TIPOS_TEJIDO = { HUESO: 0, CARNE: 1, CAPARAZON: 2 };
 const TIPOS_FLUIDO = { NINGUNO: 0, LINFA: 1 };
-const TIPOS_ZONA = { NINGUNA: 0, RESIDENCIAL: 1, INDUSTRIAL: 2 }; // Herramientas de zonificación (Fase 4)
+const TIPOS_ZONA = { NINGUNA: 0, RESIDENCIAL: 1, INDUSTRIAL: 2 };
 
 let voxelGrid = [];
-let modoHerramienta = 0; // 0: Linfa, 1: Zona Residencial, 2: Zona Industrial
+let modoHerramienta = 0; 
 const uiToolMode = document.getElementById('tool-mode');
 
 function generarRuidoOrganico(x, z) {
@@ -31,7 +31,7 @@ function inicializarGrid() {
                 tipoTejido: tejidoActual,
                 tipoFluido: TIPOS_FLUIDO.NINGUNO,
                 cantidadFluido: 0,
-                tipoZona: TIPOS_ZONA.NINGUNA // Pinceles para pintar zonas (Fase 4)
+                tipoZona: TIPOS_ZONA.NINGUNA 
             };
         }
     }
@@ -83,11 +83,10 @@ function inicializarColonos(cantidad) {
     }
 }
 
+// Función corregida sin errores de sintaxis
 function simularColonos() {
-    // Máquina de estados y Pathfinding dinámico básico (Fase 3)
     for (let colono of colonos) {
         if (colono.estado === ESTADO_COLONO.IDLE) {
-            // Cola de tareas global: Buscar una Zona Industrial o Residencial para ir a construir/trabajar
             let zonaEncontrada = false;
             for (let x = 0; x < WIDTH; x++) {
                 for (let z = 0; z < DEPTH; z++) {
@@ -102,7 +101,6 @@ function simularColonos() {
                 if (zonaEncontrada) break;
             }
         } else if (colono.estado === ESTADO_COLONO.MOVIENDO) {
-            // Pathfinding: Moverse un paso hacia el objetivo
             if (colono.x < colono.objetivoX) colono.x++;
             else if (colono.x > colono.objetivoX) colono.x--;
             
@@ -110,13 +108,13 @@ function simularColonos() {
             else if (colono.z > colono.objetivoZ) colono.z--;
 
             if (colono.x === colono.objetivoX && colono.z === colono.objetivoZ) {
-                colono.estado = ESTADO_COLONO.TRABAJANDO; // Llega y empieza a trabajar
+                colono.estado = ESTADO_COLONO.TRABAJANDO; 
             }
         }
     }
 }
 
-// --- INTERACCIÓN Y CONTROLES (MACRO-GESTIÓN) ---
+// --- INTERACCIÓN Y CONTROLES ---
 window.addEventListener('keydown', (e) => {
     if (e.code === 'Space') {
         modoHerramienta = (modoHerramienta + 1) % 3;
@@ -141,19 +139,20 @@ canvas.addEventListener('mousedown', (e) => {
             voxelGrid[mouseX][mouseZ].tipoFluido = TIPOS_FLUIDO.LINFA;
             voxelGrid[mouseX][mouseZ].cantidadFluido += 10; 
         } else if (modoHerramienta === 1) {
-            voxelGrid[mouseX][mouseZ].tipoZona = TIPOS_ZONA.RESIDENCIAL; // Pincel Residencial
+            voxelGrid[mouseX][mouseZ].tipoZona = TIPOS_ZONA.RESIDENCIAL; 
         } else if (modoHerramienta === 2) {
-            voxelGrid[mouseX][mouseZ].tipoZona = TIPOS_ZONA.INDUSTRIAL; // Pincel Industrial
+            voxelGrid[mouseX][mouseZ].tipoZona = TIPOS_ZONA.INDUSTRIAL; 
         }
     }
 });
 
 // --- RENDERIZADO Y TICK RATE ---
-let lastTime = performance.now();
+let lastTime = 0; // Inicio más estable para evitar congelamientos en el primer tick
 let acumuladorFluidos = 0, acumuladorColonos = 0;
 let contadorTicksFluidos = 0, contadorTicksColonos = 0;
 
 function gameLoop(currentTime) {
+    if (lastTime === 0) lastTime = currentTime;
     let deltaTime = currentTime - lastTime;
     lastTime = currentTime;
 
@@ -166,7 +165,6 @@ function gameLoop(currentTime) {
         simularFluidos();
     }
 
-    // Tick de colonos configurado a 500ms
     if (acumuladorColonos >= 500) {
         acumuladorColonos -= 500;
         document.getElementById('colonist-tick-count').innerText = ++contadorTicksColonos;
@@ -184,21 +182,18 @@ function renderizarMundo() {
         for (let z = 0; z < DEPTH; z++) {
             const voxel = voxelGrid[x][z];
             
-            // 1. Terreno
             let lum = 10 + (voxel.nivelAltitud * 8);
             ctx.fillStyle = (voxel.tipoTejido === TIPOS_TEJIDO.CARNE) ? `rgb(${lum + 60}, ${lum}, ${lum + 10})` : `rgb(${lum}, ${lum + 20}, ${lum + 30})`;
             ctx.fillRect(x * CELL_SIZE, z * CELL_SIZE, CELL_SIZE, CELL_SIZE);
 
-            // 2. Zonas Pintadas (Fase 4)
             if (voxel.tipoZona === TIPOS_ZONA.RESIDENCIAL) {
-                ctx.fillStyle = "rgba(100, 255, 100, 0.4)"; // Verde claro
+                ctx.fillStyle = "rgba(100, 255, 100, 0.4)"; 
                 ctx.fillRect(x * CELL_SIZE, z * CELL_SIZE, CELL_SIZE, CELL_SIZE);
             } else if (voxel.tipoZona === TIPOS_ZONA.INDUSTRIAL) {
-                ctx.fillStyle = "rgba(255, 150, 50, 0.4)"; // Naranja industrial
+                ctx.fillStyle = "rgba(255, 150, 50, 0.4)"; 
                 ctx.fillRect(x * CELL_SIZE, z * CELL_SIZE, CELL_SIZE, CELL_SIZE);
             }
 
-            // 3. Fluidos
             if (voxel.cantidadFluido > 0) {
                 ctx.fillStyle = "rgba(200, 180, 50, 0.8)"; 
                 ctx.fillRect(x * CELL_SIZE, z * CELL_SIZE, CELL_SIZE, CELL_SIZE);
@@ -206,9 +201,8 @@ function renderizarMundo() {
         }
     }
 
-    // 4. Renderizar Colonos (Fase 3)
     for (let colono of colonos) {
-        ctx.fillStyle = "#ffffff"; // Colonos representados como puntos blancos
+        ctx.fillStyle = "#ffffff"; 
         ctx.beginPath();
         ctx.arc((colono.x * CELL_SIZE) + (CELL_SIZE/2), (colono.z * CELL_SIZE) + (CELL_SIZE/2), CELL_SIZE/2.5, 0, Math.PI * 2);
         ctx.fill();
@@ -216,5 +210,5 @@ function renderizarMundo() {
 }
 
 inicializarGrid();
-inicializarColonos(5); // Instanciamos 5 agentes al iniciar
+inicializarColonos(5); 
 requestAnimationFrame(gameLoop);
