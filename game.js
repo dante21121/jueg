@@ -1,6 +1,5 @@
-// --- SISTEMA CORE Y GRID ---
+// --- CONFIGURACIÓN BASE Y GRID ---
 const WIDTH = 65, DEPTH = 50, CELL_SIZE = 14;
-const TERRENO = { HUESO: 0, CARNE: 1, CAPARAZON: 2 };
 const ESTRUCTURA = { NINGUNA: 0, PARED: 1, PUERTA: 2, CAMA: 3, MESA: 4, CULTIVO: 5 };
 const BLUEPRINT = { NINGUNO: 0, MINAR: 1, CONSTRUIR_PARED: 2, CONSTRUIR_PUERTA: 3, CONSTRUIR_CAMA: 4, CONSTRUIR_MESA: 5, DESTRUIR: 6, CONSTRUIR_CULTIVO: 7, COSECHAR: 8 };
 
@@ -11,8 +10,7 @@ let recursos = { biomasa: 50, comida: 20 };
 let reloj = { dia: 1, hora: 6, minutos: 0 };
 let gameSpeed = 0.5;
 
-// Horario Global (0: Sueño, 1: Trabajo, 2: Ocio)
-// Default: 0-5 Sueño, 6-19 Trabajo, 20-23 Ocio
+// Horario Global: 0: Sueño, 1: Trabajo, 2: Ocio
 let horarioGlobal = [0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,2,2,2]; 
 
 let modoHerramienta = 0; 
@@ -21,35 +19,54 @@ let idCounter = 1;
 let isDragging = false;
 let dragStart = {x: -1, z: -1}, dragCurrent = {x: -1, z: -1};
 
+// Generación de mapa verde estilizado con tonos y elementos decorativos
 function generarTerreno() {
     for (let x = 0; x < WIDTH; x++) {
         grid[x] = [];
         for (let z = 0; z < DEPTH; z++) {
-            let ruido = Math.sin(x * 0.1) + Math.cos(z * 0.1) + (Math.sin((x + z) * 0.05) * 2);
+            let n1 = Math.sin(x * 0.12) + Math.cos(z * 0.12);
+            let n2 = Math.sin(x * 0.05 + z * 0.05) * 1.5;
+            let val = n1 + n2;
+            
+            // Variedad de tonos de verde y tierra
+            let tonoVerde = 0; // 0: Pasto claro, 1: Pasto medio, 2: Pasto denso, 3: Tierra
+            if (val > 1.2) tonoVerde = 2;
+            else if (val > 0.2) tonoVerde = 1;
+            else if (val < -1.0) tonoVerde = 3;
+
+            let tieneArbol = (tonoVerde === 2 && Math.random() < 0.15) || (tonoVerde === 1 && Math.random() < 0.04);
+
             grid[x][z] = {
-                tipo: TERRENO.CAPARAZON, // Todo da biomasa ahora
-                estructura: ESTRUCTURA.NINGUNA, plano: BLUEPRINT.NINGUNO, 
-                caminable: true, crecimientoCultivo: 0,
-                regeneracionBiomasa: 100, esZonaExtraccion: false,
-                hasPiso: false
+                tonoVerde: tonoVerde,
+                tieneArbol: tieneArbol,
+                estructura: ESTRUCTURA.NINGUNA, 
+                plano: BLUEPRINT.NINGUNO, 
+                caminable: true, 
+                crecimientoCultivo: 0,
+                regeneracionBiomasa: 100, 
+                esZonaExtraccion: false,
+                hasPiso: false,
+                asignadoA: null // Para camas
             };
         }
     }
 }
 
-// --- ECOSISTEMA (ANIMALES) ---
+// --- ANIMALES ---
 let animales = [];
 function generarAnimales(cantidad) {
     for (let i = 0; i < cantidad; i++) {
         animales.push({
-            id: "A" + idCounter++, x: Math.floor(Math.random() * WIDTH), z: Math.floor(Math.random() * DEPTH),
-            estado: "salvaje", // "salvaje", "cazado", "domesticando", "domesticado"
+            id: "A" + idCounter++, 
+            x: Math.floor(Math.random() * WIDTH), 
+            z: Math.floor(Math.random() * DEPTH),
+            estado: "salvaje", 
             hp: 100
         });
     }
 }
 
-// --- PATHFINDING ---
+// --- PATHFINDING & NAVEGACIÓN ---
 function encontrarRuta(startX, startZ, targetX, targetZ, stopAdjacent = false) {
     if (startX === targetX && startZ === targetZ) return [];
     let queue = [{x: startX, z: startZ, path: []}];
@@ -59,7 +76,6 @@ function encontrarRuta(startX, startZ, targetX, targetZ, stopAdjacent = false) {
     while (queue.length > 0) {
         let current = queue.shift();
         
-        // Si buscamos quedarnos al lado (para construir/atacar)
         if (stopAdjacent && Math.abs(current.x - targetX) + Math.abs(current.z - targetZ) === 1) {
             return current.path; 
         }
@@ -79,7 +95,7 @@ function encontrarRuta(startX, startZ, targetX, targetZ, stopAdjacent = false) {
     return null;
 }
 
-// --- DETECCIÓN DE HABITACIONES (AUTO-PISO) ---
+// HABITACIONES (DETECCIÓN PISO DE MADERA)
 function detectarHabitaciones(startX, startZ) {
     let queue = [{x: startX, z: startZ}];
     let visited = new Set(); visited.add(`${startX},${startZ}`);
@@ -89,14 +105,12 @@ function detectarHabitaciones(startX, startZ) {
     while (queue.length > 0) {
         let curr = queue.shift();
         roomCells.push(curr);
-        
-        if (roomCells.length > 200) { isEnclosed = false; break; } // Demasiado grande para ser habitación
+        if (roomCells.length > 250) { isEnclosed = false; break; }
         
         let dirs = [{x:0,z:1},{x:0,z:-1},{x:1,z:0},{x:-1,z:0}];
         for (let d of dirs) {
             let nx = curr.x + d.x, nz = curr.z + d.z;
-            if (nx < 0 || nx >= WIDTH || nz < 0 || nz >= DEPTH) { isEnclosed = false; continue; } // Toca el borde del mapa
-            
+            if (nx < 0 || nx >= WIDTH || nz < 0 || nz >= DEPTH) { isEnclosed = false; continue; }
             let celda = grid[nx][nz];
             if (celda.estructura !== ESTRUCTURA.PARED && celda.estructura !== ESTRUCTURA.PUERTA && !visited.has(`${nx},${nz}`)) {
                 visited.add(`${nx},${nz}`);
@@ -112,27 +126,32 @@ function detectarHabitaciones(startX, startZ) {
 // --- COLONOS ---
 let colonos = [];
 let colonoSeleccionado = null;
-const NOMBRES = ["Val", "Kael", "Rye", "Jace", "Lyra"];
+const NOMBRES = ["Val", "Kael", "Rye", "Jace", "Lyra", "Sion", "Tess"];
 
 function crearColono(x, z, edad) {
     colonos.push({
-        id: idCounter++, nombre: NOMBRES[Math.floor(Math.random() * NOMBRES.length)],
-        x: x, z: z, edad: edad, energia: 100, hambre: 100,
-        estadoTxt: "Vagando", rutaActual: [], tareaActual: null, durmiendo: false,
-        trabajosPermitidos: { mineria: true, construccion: true, agricultura: true },
+        id: idCounter++, 
+        nombre: NOMBRES[Math.floor(Math.random() * NOMBRES.length)],
+        x: x, z: z, edad: edad, 
+        energia: 100, hambre: 100,
+        estadoTxt: "Vagando", 
+        rutaActual: [], 
+        tareaActual: null, 
+        durmiendo: false,
+        ticksEnTarea: 0, // Anti-stuck counter
+        camaAsignada: null, // {x, z}
+        trabajosPermitidos: { mineria: true, caza: true, construccion: true, agricultura: true, domesticacion: true },
         relaciones: {}, pareja: null 
     });
     document.getElementById('ui-poblacion').innerText = colonos.length;
 }
 
-// --- MOTOR DE TAREAS Y SIMULACIÓN ---
+// --- LÓGICA DE SIMULACIÓN Y TAREAS ---
 function procesarColonos() {
-    // 1. Crecimiento de cultivos y regeneración de biomasa
+    // 1. Crecimiento de vegetación, cultivos y auto-extracción
     for (let x = 0; x < WIDTH; x++) {
         for (let z = 0; z < DEPTH; z++) {
             let celda = grid[x][z];
-            
-            // Agricultura
             if (celda.estructura === ESTRUCTURA.CULTIVO && celda.plano !== BLUEPRINT.COSECHAR && reloj.hora > 6 && reloj.hora < 19) {
                 celda.crecimientoCultivo += 0.5; 
                 if (celda.crecimientoCultivo >= 100) {
@@ -140,8 +159,6 @@ function procesarColonos() {
                     tareasGlobales.push({ tipo: "COSECHAR", req: "agricultura", x: x, z: z });
                 }
             }
-            
-            // Regeneración Biomasa y Auto-Extracción
             if (celda.regeneracionBiomasa < 100) {
                 celda.regeneracionBiomasa += 0.1;
                 if (celda.regeneracionBiomasa >= 100) {
@@ -155,7 +172,7 @@ function procesarColonos() {
         }
     }
 
-    // 2. Animales
+    // 2. Movimiento de animales
     for (let anim of animales) {
         if (Math.random() < 0.1) {
             let nx = anim.x + (Math.floor(Math.random() * 3) - 1);
@@ -166,8 +183,8 @@ function procesarColonos() {
         }
     }
 
-    // 3. Colonos
-    let modoActual = horarioGlobal[reloj.hora]; // 0: Sueño, 1: Trabajo, 2: Ocio
+    // 3. IA de Colonos
+    let modoActual = horarioGlobal[reloj.hora]; 
 
     for (let colono of colonos) {
         if (!colono.durmiendo) colono.energia -= 0.05;
@@ -175,36 +192,53 @@ function procesarColonos() {
         if (colono.energia < 0) colono.energia = 0;
         if (colono.hambre < 0) colono.hambre = 0;
 
-        // Horario y Necesidades Críticas
+        // --- SISTEMA ANTI-BLOQUEOS (TASK TIMEOUT) ---
+        if (colono.tareaActual) {
+            colono.ticksEnTarea++;
+            if (colono.ticksEnTarea > 35) { // Si lleva más de ~5 segundos intentando sin lograrlo
+                if (!colono.tareaActual.esCritica) tareasGlobales.push(colono.tareaActual); // Reinsertar en la cola
+                colono.tareaActual = null;
+                colono.rutaActual = [];
+                colono.ticksEnTarea = 0;
+                colono.estadoTxt = "Reevaluando";
+                continue;
+            }
+        } else {
+            colono.ticksEnTarea = 0;
+        }
+
+        // Horario y Necesidades
         let fuerzaDormir = (colono.energia < 20) || (modoActual === 0 && colono.energia < 95);
         if (fuerzaDormir && !colono.tareaActual?.esCritica && !colono.durmiendo) {
-            asignarTareaDormir(colono);
+            buscarOCrearCamaPropia(colono);
         } else if (colono.hambre < 25 && recursos.comida > 0 && !colono.tareaActual?.esCritica) {
             asignarTareaComer(colono);
         }
 
-        // Modo Ocio (Fuerza cancelar trabajo y vagar)
+        // Ocio
         if (modoActual === 2 && colono.tareaActual && !colono.tareaActual.esCritica) {
-            if (colono.tareaActual.tipo !== "CAZAR" && colono.tareaActual.tipo !== "DOMESTICAR") { // No cancela caza activa
+            if (colono.tareaActual.tipo !== "CAZAR" && colono.tareaActual.tipo !== "DOMESTICAR") {
                 tareasGlobales.push(colono.tareaActual);
                 colono.tareaActual = null;
                 colono.rutaActual = [];
             }
         }
 
-        // Buscar Trabajo (Solo si es horario de trabajo y no está durmiendo)
+        // Buscar Trabajo (Sistemático y sin atorarse)
         if (!colono.tareaActual && tareasGlobales.length > 0 && !colono.durmiendo && modoActual === 1) {
             for (let i = 0; i < tareasGlobales.length; i++) {
                 let tarea = tareasGlobales[i];
                 if (colono.trabajosPermitidos[tarea.req]) {
                     let costoReq = COSTOS[tarea.tipo] || 0;
                     if (recursos.biomasa >= costoReq) {
-                        // FIX: Si es construcción/caza, pathfinding se detiene en casilla adyacente
                         let stopAdj = tarea.tipo.startsWith("CONSTRUIR") || tarea.tipo === "CAZAR" || tarea.tipo === "DOMESTICAR";
                         let ruta = encontrarRuta(colono.x, colono.z, tarea.x, tarea.z, stopAdj);
                         
                         if (ruta) {
-                            colono.tareaActual = tarea; colono.rutaActual = ruta; colono.estadoTxt = "Yendo a trabajar";
+                            colono.tareaActual = tarea; 
+                            colono.rutaActual = ruta; 
+                            colono.estadoTxt = "Yendo a trabajar";
+                            colono.ticksEnTarea = 0;
                             tareasGlobales.splice(i, 1); 
                             break; 
                         }
@@ -213,16 +247,15 @@ function procesarColonos() {
             }
         }
 
-        // Moverse y Ejecutar
+        // Movimiento
         if (colono.rutaActual.length > 0) {
             let sig = colono.rutaActual[0];
             colono.x = sig.x; colono.z = sig.z;
             colono.rutaActual.shift();
             
-            // Si el objetivo se movió (Animal), recalcular
             if (colono.tareaActual && (colono.tareaActual.tipo === "CAZAR" || colono.tareaActual.tipo === "DOMESTICAR")) {
                 let anim = animales.find(a => a.id === colono.tareaActual.animId);
-                if (!anim || anim.hp <= 0) { colono.tareaActual = null; colono.rutaActual = []; continue; } // Murió o ya no existe
+                if (!anim || anim.hp <= 0) { colono.tareaActual = null; colono.rutaActual = []; continue; }
                 if (Math.abs(colono.x - anim.x) + Math.abs(colono.z - anim.z) > 1) {
                     colono.tareaActual.x = anim.x; colono.tareaActual.z = anim.z;
                     colono.rutaActual = encontrarRuta(colono.x, colono.z, anim.x, anim.z, true) || [];
@@ -230,11 +263,10 @@ function procesarColonos() {
             }
             if (colono.rutaActual.length === 0) ejecutarTarea(colono);
         } else if (!colono.tareaActual && !colono.durmiendo) {
-            // Vagabundeo Activo
             colono.estadoTxt = (modoActual === 2) ? "Recreación (Ocio)" : "Vagando";
-            if (Math.random() < 0.4) { 
-                let nx = colono.x + (Math.floor(Math.random() * 7) - 3); 
-                let nz = colono.z + (Math.floor(Math.random() * 7) - 3);
+            if (Math.random() < 0.35) { 
+                let nx = colono.x + (Math.floor(Math.random() * 5) - 2); 
+                let nz = colono.z + (Math.floor(Math.random() * 5) - 2);
                 if (nx >= 0 && nx < WIDTH && nz >= 0 && nz < DEPTH && grid[nx][nz].caminable) { colono.x = nx; colono.z = nz; }
             }
         }
@@ -249,16 +281,40 @@ function procesarColonos() {
     actualizarInspectorUI();
 }
 
-function asignarTareaDormir(c) {
+// ASIGNACIÓN EXCLUSIVA DE CAMAS
+function buscarOCrearCamaPropia(c) {
+    // 1. Si ya tiene cama asignada y aún existe
+    if (c.camaAsignada) {
+        let bedCelda = grid[c.camaAsignada.x]?.[c.camaAsignada.z];
+        if (bedCelda && bedCelda.estructura === ESTRUCTURA.CAMA && bedCelda.asignadoA === c.id) {
+            let r = encontrarRuta(c.x, c.z, c.camaAsignada.x, c.camaAsignada.z);
+            if (r) { c.tareaActual = { tipo: "DORMIR", esCritica: true, x: c.camaAsignada.x, z: c.camaAsignada.z }; c.rutaActual = r; c.estadoTxt = "Ir a su cama"; return; }
+        } else {
+            c.camaAsignada = null; // Cama destruida
+        }
+    }
+
+    // 2. Buscar cama desocupada y no asignada
     for (let x = 0; x < WIDTH; x++) {
         for (let z = 0; z < DEPTH; z++) {
-            if (grid[x][z].estructura === ESTRUCTURA.CAMA) {
+            let celda = grid[x][z];
+            if (celda.estructura === ESTRUCTURA.CAMA && (celda.asignadoA === null || celda.asignadoA === c.id)) {
                 let r = encontrarRuta(c.x, c.z, x, z);
-                if (r) { c.tareaActual = { tipo: "DORMIR", esCritica: true, x: x, z: z }; c.rutaActual = r; c.estadoTxt = "Buscando cama"; return; }
+                if (r) {
+                    celda.asignadoA = c.id;
+                    c.camaAsignada = {x, z};
+                    c.tareaActual = { tipo: "DORMIR", esCritica: true, x: x, z: z }; 
+                    c.rutaActual = r; 
+                    c.estadoTxt = "Asignando cama"; 
+                    return; 
+                }
             }
         }
     }
-    c.tareaActual = { tipo: "DORMIR", esCritica: true, x: c.x, z: c.z }; c.durmiendo = true;
+
+    // 3. Si no hay camas disponibles, duerme en el suelo
+    c.tareaActual = { tipo: "DORMIR", esCritica: true, x: c.x, z: c.z }; 
+    c.durmiendo = true;
 }
 
 function asignarTareaComer(c) {
@@ -277,24 +333,33 @@ function ejecutarTarea(c) {
         if (anim) {
             anim.hp -= 50; c.estadoTxt = "Cazando";
             if (anim.hp <= 0) { recursos.comida += 15; animales = animales.filter(a => a.id !== t.animId); c.tareaActual = null; }
-            else { c.rutaActual = encontrarRuta(c.x, c.z, anim.x, anim.z, true) || []; return; } // Repetir ataque
+            else { c.rutaActual = encontrarRuta(c.x, c.z, anim.x, anim.z, true) || []; return; }
         }
     } else if (t.tipo === "DOMESTICAR") {
         let anim = animales.find(a => a.id === t.animId);
         if (anim && recursos.comida >= 2) {
             recursos.comida -= 2; c.estadoTxt = "Domesticando";
-            if (Math.random() < 0.3) { anim.estado = "domesticado"; } // Éxito
-            else { anim.estado = "salvaje"; } // Fallo, vuelve a ser salvaje
+            if (Math.random() < 0.35) { anim.estado = "domesticado"; }
+            else { anim.estado = "salvaje"; }
         }
     } else {
         let celda = grid[t.x][t.z];
         if (t.tipo === "MINAR") {
             celda.plano = BLUEPRINT.NINGUNO;
-            celda.regeneracionBiomasa = 0; // Se resetea el color/recurso
+            celda.regeneracionBiomasa = 0; 
+            celda.tieneArbol = false;
             recursos.biomasa += 4;
         } 
         else if (t.tipo === "DESTRUIR") {
-            celda.plano = BLUEPRINT.NINGUNO; celda.estructura = ESTRUCTURA.NINGUNA; celda.caminable = true; celda.hasPiso = false;
+            celda.plano = BLUEPRINT.NINGUNO; 
+            if (celda.estructura === ESTRUCTURA.CAMA && celda.asignadoA) {
+                let colOwner = colonos.find(co => co.id === celda.asignadoA);
+                if (colOwner) colOwner.camaAsignada = null;
+            }
+            celda.estructura = ESTRUCTURA.NINGUNA; 
+            celda.caminable = true; 
+            celda.hasPiso = false;
+            celda.asignadoA = null;
             recursos.biomasa += 2; 
         }
         else if (t.tipo === "COSECHAR") {
@@ -302,13 +367,12 @@ function ejecutarTarea(c) {
         }
         else if (t.tipo.startsWith("CONSTRUIR")) {
             recursos.biomasa -= costo; celda.plano = BLUEPRINT.NINGUNO;
-            if (t.tipo === "CONSTRUIR_PARED") { celda.estructura = ESTRUCTURA.PARED; celda.caminable = false; }
-            if (t.tipo === "CONSTRUIR_PUERTA") celda.estructura = ESTRUCTURA.PUERTA;
-            if (t.tipo === "CONSTRUIR_CAMA") celda.estructura = ESTRUCTURA.CAMA;
-            if (t.tipo === "CONSTRUIR_MESA") { celda.estructura = ESTRUCTURA.MESA; celda.caminable = false; }
-            if (t.tipo === "CONSTRUIR_CULTIVO") { celda.estructura = ESTRUCTURA.CULTIVO; celda.crecimientoCultivo = 0; }
+            if (t.tipo === "CONSTRUIR_PARED") { celda.estructura = ESTRUCTURA.PARED; celda.caminable = false; celda.tieneArbol = false; }
+            if (t.tipo === "CONSTRUIR_PUERTA") { celda.estructura = ESTRUCTURA.PUERTA; celda.tieneArbol = false; }
+            if (t.tipo === "CONSTRUIR_CAMA") { celda.estructura = ESTRUCTURA.CAMA; celda.tieneArbol = false; }
+            if (t.tipo === "CONSTRUIR_MESA") { celda.estructura = ESTRUCTURA.MESA; celda.caminable = false; celda.tieneArbol = false; }
+            if (t.tipo === "CONSTRUIR_CULTIVO") { celda.estructura = ESTRUCTURA.CULTIVO; celda.crecimientoCultivo = 0; celda.tieneArbol = false; }
             
-            // Revisar si cerramos una habitación al construir pared/puerta
             if (t.tipo === "CONSTRUIR_PARED" || t.tipo === "CONSTRUIR_PUERTA") {
                 let adjFree = [{x:1,z:0},{x:-1,z:0},{x:0,z:1},{x:0,z:-1}].find(d => grid[t.x+d.x]?.[t.z+d.z]?.caminable);
                 if (adjFree) detectarHabitaciones(t.x+adjFree.x, t.z+adjFree.z);
@@ -320,7 +384,7 @@ function ejecutarTarea(c) {
     document.getElementById('ui-comida').innerText = recursos.comida;
 }
 
-// --- INTERFAZ Y HERRAMIENTAS ---
+// --- INTERFAZ & SELECCIÓN ---
 window.addEventListener('keydown', (e) => {
     if (e.code === 'Space') setSpeed(gameSpeed === 0 ? 1 : 0);
     if (e.code === 'Digit1') setSpeed(1); 
@@ -385,8 +449,7 @@ canvas.addEventListener('mouseup', (e) => {
     let startX = Math.min(dragStart.x, dragCurrent.x), endX = Math.max(dragStart.x, dragCurrent.x);
     let startZ = Math.min(dragStart.z, dragCurrent.z), endZ = Math.max(dragStart.z, dragCurrent.z);
 
-    if (modoHerramienta === 0) {
-        // Drag Select Colonist (Solo selecciona si hay exactamente 1 en el cuadro)
+    if (modoHerramienta === 0) { // DRAG SELECT COLONIST
         let colsInBox = colonos.filter(c => c.x >= startX && c.x <= endX && c.z >= startZ && c.z <= endZ);
         if (colsInBox.length === 1) {
             colonoSeleccionado = colsInBox[0]; document.getElementById('inspector-layer').style.display = 'block'; actualizarInspectorUI();
@@ -403,24 +466,22 @@ canvas.addEventListener('mouseup', (e) => {
 function aplicarHerramientaCelda(mx, mz) {
     let celda = grid[mx][mz];
     
-    if (modoHerramienta === 6) { // CANCELAR/DESTRUIR
+    if (modoHerramienta === 10) { // CANCELAR / DEMOLER
         celda.esZonaExtraccion = false;
         if (celda.plano !== BLUEPRINT.NINGUNO) { celda.plano = BLUEPRINT.NINGUNO; tareasGlobales = tareasGlobales.filter(t => t.x !== mx || t.z !== mz); }
         else if (celda.estructura !== ESTRUCTURA.NINGUNA) { celda.plano = BLUEPRINT.DESTRUIR; tareasGlobales.push({ tipo: "DESTRUIR", req: "construccion", x: mx, z: mz }); }
         return;
     }
-    
-    if (modoHerramienta === 8) { // ZONA DE EXTRACCIÓN
+    if (modoHerramienta === 7) { // ZONA DE EXTRACCIÓN AUTO
         celda.esZonaExtraccion = true;
         if (celda.regeneracionBiomasa === 100 && celda.estructura === ESTRUCTURA.NINGUNA) { celda.plano = BLUEPRINT.MINAR; tareasGlobales.push({ tipo: "MINAR", req: "mineria", x: mx, z: mz }); }
         return;
     }
-
-    if (modoHerramienta === 9 || modoHerramienta === 10) { // CAZAR o DOMESTICAR
+    if (modoHerramienta === 8 || modoHerramienta === 9) { // CAZA O DOMESTICACIÓN
         let anim = animales.find(a => a.x === mx && a.z === mz);
         if (anim && anim.estado === "salvaje") {
-            anim.estado = modoHerramienta === 9 ? "cazado" : "domesticando";
-            tareasGlobales.push({ tipo: modoHerramienta === 9 ? "CAZAR" : "DOMESTICAR", req: modoHerramienta === 9 ? "mineria" : "agricultura", animId: anim.id, x: mx, z: mz });
+            anim.estado = modoHerramienta === 8 ? "cazado" : "domesticando";
+            tareasGlobales.push({ tipo: modoHerramienta === 8 ? "CAZAR" : "DOMESTICAR", req: modoHerramienta === 8 ? "caza" : "domesticacion", animId: anim.id, x: mx, z: mz });
         }
         return;
     }
@@ -431,7 +492,7 @@ function aplicarHerramientaCelda(mx, mz) {
         if (modoHerramienta === 3) { celda.plano = BLUEPRINT.CONSTRUIR_PUERTA; tareasGlobales.push({ tipo: "CONSTRUIR_PUERTA", req: "construccion", x: mx, z: mz }); }
         if (modoHerramienta === 4) { celda.plano = BLUEPRINT.CONSTRUIR_CAMA; tareasGlobales.push({ tipo: "CONSTRUIR_CAMA", req: "construccion", x: mx, z: mz }); }
         if (modoHerramienta === 5) { celda.plano = BLUEPRINT.CONSTRUIR_MESA; tareasGlobales.push({ tipo: "CONSTRUIR_MESA", req: "construccion", x: mx, z: mz }); }
-        if (modoHerramienta === 7) { celda.plano = BLUEPRINT.CONSTRUIR_CULTIVO; tareasGlobales.push({ tipo: "CONSTRUIR_CULTIVO", req: "agricultura", x: mx, z: mz }); }
+        if (modoHerramienta === 6) { celda.plano = BLUEPRINT.CONSTRUIR_CULTIVO; tareasGlobales.push({ tipo: "CONSTRUIR_CULTIVO", req: "agricultura", x: mx, z: mz }); }
     }
 }
 
@@ -441,15 +502,23 @@ function actualizarInspectorUI() {
     document.getElementById('insp-edad').innerText = Math.floor(colonoSeleccionado.edad);
     let pObj = colonoSeleccionado.pareja ? colonos.find(c => c.id === colonoSeleccionado.pareja) : null;
     document.getElementById('insp-pareja').innerText = pObj ? pObj.nombre : "Ninguna";
+    
+    let txtCama = "Sin Cama";
+    if (colonoSeleccionado.camaAsignada) txtCama = `Cama en (${colonoSeleccionado.camaAsignada.x}, ${colonoSeleccionado.camaAsignada.z})`;
+    document.getElementById('insp-cama').innerText = txtCama;
+    
     document.getElementById('insp-estado').innerText = colonoSeleccionado.estadoTxt;
     document.getElementById('insp-energia').style.width = colonoSeleccionado.energia + "%";
     document.getElementById('insp-hambre').style.width = colonoSeleccionado.hambre + "%";
+    
     document.getElementById('chk-mineria').checked = colonoSeleccionado.trabajosPermitidos.mineria;
+    document.getElementById('chk-caza').checked = colonoSeleccionado.trabajosPermitidos.caza;
     document.getElementById('chk-construccion').checked = colonoSeleccionado.trabajosPermitidos.construccion;
     document.getElementById('chk-agricultura').checked = colonoSeleccionado.trabajosPermitidos.agricultura;
+    document.getElementById('chk-domesticacion').checked = colonoSeleccionado.trabajosPermitidos.domesticacion;
 }
 
-// --- BUCLE Y RENDERIZADO ---
+// --- RENDERIZADO VISUAL CON VERDES Y DETALLES ---
 let lastTime = 0, tickLogica = 0;
 const overlayNoche = document.getElementById('night-overlay');
 
@@ -478,85 +547,99 @@ function gameLoop(currentTime) {
 
 function renderizarMundo() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // 1. DIBUJAR TERRENO VERDE
     for (let x = 0; x < WIDTH; x++) {
         for (let z = 0; z < DEPTH; z++) {
             let celda = grid[x][z];
             
-            // Suelo y Regeneración Biomasa (Visual)
-            let baseColor = 44; // #2c3e4a aprox
-            if (celda.regeneracionBiomasa < 100) baseColor = Math.floor(10 + (celda.regeneracionBiomasa * 0.34)); // Más oscuro si está talado
-            ctx.fillStyle = `rgb(${baseColor - 10}, ${baseColor + 10}, ${baseColor + 30})`;
+            // Paleta de tonos verdes
+            if (celda.tonoVerde === 0) ctx.fillStyle = "#4a7c59"; // Pasto medio
+            else if (celda.tonoVerde === 1) ctx.fillStyle = "#3b6645"; // Pasto oscuro
+            else if (celda.tonoVerde === 2) ctx.fillStyle = "#5c946e"; // Pasto claro/frondoso
+            else ctx.fillStyle = "#7f5539"; // Parche de tierra
+
+            // Si está recién extraído/talado, se oscurece
+            if (celda.regeneracionBiomasa < 100) {
+                let osc = Math.floor(celda.regeneracionBiomasa * 0.5);
+                ctx.fillStyle = `rgb(${25 + osc}, ${45 + osc}, ${25 + osc})`;
+            }
+
             ctx.fillRect(x * CELL_SIZE, z * CELL_SIZE, CELL_SIZE, CELL_SIZE);
 
-            // Auto-Pisos (Habitaciones)
+            // Pisos de Madera (Habitaciones)
             if (celda.hasPiso && celda.estructura === ESTRUCTURA.NINGUNA) {
-                ctx.fillStyle = "rgba(255, 255, 255, 0.1)"; ctx.fillRect(x * CELL_SIZE, z * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+                ctx.fillStyle = "#b07d4f"; ctx.fillRect(x * CELL_SIZE, z * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+                ctx.strokeStyle = "#8d5b30"; ctx.strokeRect(x * CELL_SIZE, z * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+            }
+
+            // Árboles Decorativos
+            if (celda.tieneArbol && celda.estructura === ESTRUCTURA.NINGUNA && celda.regeneracionBiomasa === 100) {
+                ctx.fillStyle = "#2d4a22"; ctx.beginPath(); 
+                ctx.arc((x*CELL_SIZE)+(CELL_SIZE/2), (z*CELL_SIZE)+(CELL_SIZE/2), 4, 0, Math.PI*2); ctx.fill();
             }
 
             // Estructuras
             if (celda.estructura === ESTRUCTURA.PARED) {
-                ctx.fillStyle = "#8a96a3"; ctx.fillRect(x * CELL_SIZE, z * CELL_SIZE, CELL_SIZE, CELL_SIZE);
-                ctx.strokeStyle = "#1a252c"; ctx.strokeRect(x * CELL_SIZE, z * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+                ctx.fillStyle = "#5a6577"; ctx.fillRect(x * CELL_SIZE, z * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+                ctx.strokeStyle = "#2b323d"; ctx.strokeRect(x * CELL_SIZE, z * CELL_SIZE, CELL_SIZE, CELL_SIZE);
             } else if (celda.estructura === ESTRUCTURA.PUERTA) {
-                ctx.fillStyle = "#8b5a2b"; ctx.fillRect(x * CELL_SIZE + 3, z * CELL_SIZE + 3, CELL_SIZE - 6, CELL_SIZE - 6);
+                ctx.fillStyle = "#b07d4f"; ctx.fillRect(x * CELL_SIZE + 3, z * CELL_SIZE + 3, CELL_SIZE - 6, CELL_SIZE - 6);
             } else if (celda.estructura === ESTRUCTURA.CAMA) {
-                // Nuevo render de Cama (Sábana azul, Almohada blanca)
-                ctx.fillStyle = "#3f51b5"; ctx.fillRect(x * CELL_SIZE + 2, z * CELL_SIZE + 5, CELL_SIZE - 4, CELL_SIZE - 7); // Sábana
-                ctx.fillStyle = "#ffffff"; ctx.fillRect(x * CELL_SIZE + 3, z * CELL_SIZE + 2, CELL_SIZE - 6, 3); // Almohada
+                // Renderizado de Cama (Sábana Azul + Almohada Blanca)
+                ctx.fillStyle = (celda.asignadoA !== null) ? "#3f51b5" : "#7986cb"; // Azul más brillante si está asignada
+                ctx.fillRect(x * CELL_SIZE + 2, z * CELL_SIZE + 5, CELL_SIZE - 4, CELL_SIZE - 7); 
+                ctx.fillStyle = "#ffffff"; ctx.fillRect(x * CELL_SIZE + 3, z * CELL_SIZE + 2, CELL_SIZE - 6, 3);
             } else if (celda.estructura === ESTRUCTURA.MESA) {
                 ctx.fillStyle = "#cd853f"; ctx.fillRect(x * CELL_SIZE + 1, z * CELL_SIZE + 1, CELL_SIZE - 2, CELL_SIZE - 2);
             } else if (celda.estructura === ESTRUCTURA.CULTIVO) {
-                let verdor = Math.floor(50 + (celda.crecimientoCultivo * 2));
+                let verdor = Math.floor(60 + (celda.crecimientoCultivo * 1.8));
                 ctx.fillStyle = `rgb(20, ${verdor}, 20)`; ctx.fillRect(x * CELL_SIZE + 1, z * CELL_SIZE + 1, CELL_SIZE - 2, CELL_SIZE - 2);
                 if (celda.crecimientoCultivo >= 100) { ctx.fillStyle = "#ffaa00"; ctx.beginPath(); ctx.arc((x*CELL_SIZE)+(CELL_SIZE/2), (z*CELL_SIZE)+(CELL_SIZE/2), 3, 0, Math.PI*2); ctx.fill(); }
             }
 
-            // Marcas (Zonas de extracción y Planos)
+            // Zonas y Planos
             if (celda.esZonaExtraccion && celda.estructura === ESTRUCTURA.NINGUNA) {
-                ctx.fillStyle = "rgba(102, 252, 241, 0.1)"; ctx.fillRect(x * CELL_SIZE, z * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+                ctx.fillStyle = "rgba(112, 224, 0, 0.15)"; ctx.fillRect(x * CELL_SIZE, z * CELL_SIZE, CELL_SIZE, CELL_SIZE);
             }
             if (celda.plano !== BLUEPRINT.NINGUNO) {
                 if (celda.plano === BLUEPRINT.DESTRUIR) ctx.strokeStyle = "#ff4c4c"; 
                 else if (celda.plano === BLUEPRINT.MINAR || celda.plano === BLUEPRINT.COSECHAR) ctx.strokeStyle = "#ffaa00";
-                else if (celda.plano === BLUEPRINT.CONSTRUIR_CULTIVO) ctx.strokeStyle = "#4caf50";
+                else if (celda.plano === BLUEPRINT.CONSTRUIR_CULTIVO) ctx.strokeStyle = "#70e000";
                 else ctx.strokeStyle = "#66fcf1";
                 ctx.setLineDash([2, 2]); ctx.strokeRect(x * CELL_SIZE + 1, z * CELL_SIZE + 1, CELL_SIZE - 2, CELL_SIZE - 2); ctx.setLineDash([]);
             }
         }
     }
 
-    // Animales
+    // 2. DIBUJAR ANIMALES
     for (let a of animales) {
-        ctx.fillStyle = a.estado === "domesticado" ? "#4caf50" : "#a67c00"; // Verde si domesticado, Marrón si salvaje
+        ctx.fillStyle = a.estado === "domesticado" ? "#70e000" : "#d4a373"; 
         ctx.fillRect((a.x * CELL_SIZE) + 2, (a.z * CELL_SIZE) + 4, CELL_SIZE - 4, CELL_SIZE - 6);
         if (a.estado === "cazado") { ctx.strokeStyle = "#ff4c4c"; ctx.strokeRect((a.x * CELL_SIZE), (a.z * CELL_SIZE), CELL_SIZE, CELL_SIZE); }
         if (a.estado === "domesticando") { ctx.strokeStyle = "#66fcf1"; ctx.strokeRect((a.x * CELL_SIZE), (a.z * CELL_SIZE), CELL_SIZE, CELL_SIZE); }
     }
 
-    // Drag Box
-    if (isDragging && modoHerramienta === 0) { // Drag box blanco sutil para selección de colonos
+    // 3. CAJA DE SELECCIÓN (DRAG)
+    if (isDragging) {
         let sx = Math.min(dragStart.x, dragCurrent.x) * CELL_SIZE; let sz = Math.min(dragStart.z, dragCurrent.z) * CELL_SIZE;
         let sw = (Math.abs(dragStart.x - dragCurrent.x) + 1) * CELL_SIZE; let sh = (Math.abs(dragStart.z - dragCurrent.z) + 1) * CELL_SIZE;
-        ctx.strokeStyle = "#ffffff"; ctx.setLineDash([4, 2]); ctx.strokeRect(sx, sz, sw, sh); ctx.setLineDash([]);
-    } else if (isDragging) {
-        let sx = Math.min(dragStart.x, dragCurrent.x) * CELL_SIZE; let sz = Math.min(dragStart.z, dragCurrent.z) * CELL_SIZE;
-        let sw = (Math.abs(dragStart.x - dragCurrent.x) + 1) * CELL_SIZE; let sh = (Math.abs(dragStart.z - dragCurrent.z) + 1) * CELL_SIZE;
-        ctx.fillStyle = "rgba(102, 252, 241, 0.2)"; ctx.fillRect(sx, sz, sw, sh);
-        ctx.strokeStyle = "#66fcf1"; ctx.setLineDash([4, 2]); ctx.strokeRect(sx, sz, sw, sh); ctx.setLineDash([]);
+        ctx.fillStyle = "rgba(112, 224, 0, 0.2)"; ctx.fillRect(sx, sz, sw, sh);
+        ctx.strokeStyle = "#70e000"; ctx.setLineDash([4, 2]); ctx.strokeRect(sx, sz, sw, sh); ctx.setLineDash([]);
     }
 
-    // Colonos
+    // 4. DIBUJAR COLONOS
     for (let c of colonos) {
-        ctx.fillStyle = c.durmiendo ? "#555" : (c === colonoSeleccionado ? "#66fcf1" : "#ffffff");
+        ctx.fillStyle = c.durmiendo ? "#555" : (c === colonoSeleccionado ? "#70e000" : "#ffffff");
         ctx.beginPath(); ctx.arc((c.x * CELL_SIZE) + (CELL_SIZE/2), (c.z * CELL_SIZE) + (CELL_SIZE/2), CELL_SIZE/2.5, 0, Math.PI * 2); ctx.fill();
-        ctx.fillStyle = c === colonoSeleccionado ? "#ffffff" : "#66fcf1"; ctx.font = "9px Arial";
+        ctx.fillStyle = c === colonoSeleccionado ? "#ffffff" : "#70e000"; ctx.font = "9px Arial";
         ctx.fillText(c.nombre, (c.x * CELL_SIZE) - 4, (c.z * CELL_SIZE) - 2);
     }
 }
 
 generarTerreno();
 crearColono(30, 25, 22); crearColono(31, 25, 25); crearColono(32, 25, 19); 
-generarAnimales(5); // Generamos 5 animales salvajes
+generarAnimales(6); 
 inicializarHorarioUI();
 setSpeed(2); 
 requestAnimationFrame(gameLoop);
