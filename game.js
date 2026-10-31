@@ -83,7 +83,7 @@ function inicializarColonos(cantidad) {
     }
 }
 
-function simularColonos IA() {
+function simularColonos() {
     // Máquina de estados y Pathfinding dinámico básico (Fase 3)
     for (let colono of colonos) {
         if (colono.estado === ESTADO_COLONO.IDLE) {
