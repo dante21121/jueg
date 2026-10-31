@@ -8,7 +8,7 @@ const COSTOS = { "CONSTRUIR_PARED": 5, "CONSTRUIR_PUERTA": 3, "CONSTRUIR_CAMA": 
 let grid = [];
 let recursos = { biomasa: 50, comida: 20 };
 let reloj = { dia: 1, hora: 6, minutos: 0 };
-let gameSpeed = 0.5;
+let gameSpeed = 0.3;
 
 // Horario Global: 0: Sueño, 1: Trabajo, 2: Ocio
 let horarioGlobal = [0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,2,2,2,2]; 
@@ -394,7 +394,7 @@ window.addEventListener('keydown', (e) => {
 });
 
 function setSpeed(s) {
-    if(s === 1) gameSpeed = 0.5; else if(s === 2) gameSpeed = 1; else if(s === 4) gameSpeed = 3; else gameSpeed = 0;
+    if(s === 1) gameSpeed = 0.3; else if(s === 2) gameSpeed = .7; else if(s === 4) gameSpeed = 2; else gameSpeed = 0;
     document.querySelectorAll('.time-controls button').forEach(b => b.classList.remove('active'));
     if(s===0) document.getElementById('btn-pause').classList.add('active');
     if(s===1) document.getElementById('btn-1x').classList.add('active');
