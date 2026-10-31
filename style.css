@@ -5,13 +5,10 @@
     --text-highlight: #66fcf1;
     --border-color: #45a29e;
 }
-
 body {
     margin: 0; padding: 0; background-color: var(--bg-color); color: var(--text-main);
     font-family: 'Courier New', Courier, monospace; overflow: hidden;
 }
-
-/* Barras y Paneles */
 #top-bar {
     position: absolute; top: 0; left: 0; width: 100%; background: var(--ui-bg);
     border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between;
@@ -22,13 +19,13 @@ body {
 
 #tools-layer {
     position: absolute; top: 50px; left: 10px; background: var(--ui-bg); padding: 15px;
-    border: 1px solid var(--border-color); border-radius: 4px; width: 220px; z-index: 10;
+    border: 1px solid var(--border-color); border-radius: 4px; width: 230px; z-index: 10;
 }
 .tool-list button {
-    display: block; width: 100%; padding: 8px; margin-bottom: 5px;
+    display: block; width: 100%; padding: 6px; margin-bottom: 4px; font-size: 0.85rem;
     background: #111; color: var(--text-main); border: 1px solid #333; text-align: left; cursor: pointer;
 }
-.tool-list button.active { background: #8a2b3b; border-color: #ff4c4c; font-weight: bold; }
+.tool-list button.active { background: #8a2b3b; border-color: #ff4c4c; font-weight: bold; color: white;}
 
 #inspector-layer {
     position: absolute; top: 50px; right: 10px; background: var(--ui-bg); padding: 15px;
@@ -41,8 +38,7 @@ p { margin: 5px 0; font-size: 0.85rem; }
 .bar-fill-energia { background: #4caf50; height: 100%; transition: width 0.2s; }
 .bar-fill-hambre { background: #ff9800; height: 100%; transition: width 0.2s; }
 
-canvas { display: block; margin: 50px auto 0 auto; border: 2px solid #1f2833; }
-
+canvas { display: block; margin: 50px auto 0 auto; border: 2px solid #1f2833; user-select: none; }
 #night-overlay {
     position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
     background: rgba(0, 5, 20, 0.85); pointer-events: none; z-index: 5;
