@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AETHEL: RimWorld Edition - Final</title>
+    <title>AETHEL: RimWorld Green Colony</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div id="night-overlay"></div>
 
-    <!-- Panel Superior -->
+    <!-- Panel Superior: Tiempo y Recursos -->
     <div id="top-bar">
         <div class="time-controls">
             <button id="btn-pause" onclick="setSpeed(0)">⏸ (Espacio)</button>
@@ -29,18 +29,19 @@
         <div class="tool-list">
             <button onclick="setTool(0)" id="tool-0" class="active">0. 👆 Seleccionar (Drag)</button>
             <hr>
-            <button onclick="setTool(1)" id="tool-1">1. ⛏️ Extraer Manual</button>
-            <button onclick="setTool(8)" id="tool-8">8. 🔄 Zona de Extracción</button>
+            <button onclick="setTool(1)" id="tool-1">1. ⛏️ Minar / Excavación</button>
+            <button onclick="setTool(7)" id="tool-7">2. 🔄 Zona Extracción Auto</button>
             <hr>
-            <button onclick="setTool(2)" id="tool-2">2. 🧱 Pared (5 Biom)</button>
-            <button onclick="setTool(3)" id="tool-3">3. 🚪 Puerta (3 Biom)</button>
-            <button onclick="setTool(4)" id="tool-4">4. 🛏️ Cama (10 Biom)</button>
-            <button onclick="setTool(7)" id="tool-7">7. 🌱 Zona de Cultivo</button>
+            <button onclick="setTool(2)" id="tool-2">3. 🧱 Pared (5 Biom)</button>
+            <button onclick="setTool(3)" id="tool-3">4. 🚪 Puerta (3 Biom)</button>
+            <button onclick="setTool(4)" id="tool-4">5. 🛏️ Cama Propia (10 Biom)</button>
+            <button onclick="setTool(5)" id="tool-5">6. 🛠️ Mesa Trab. (15 Biom)</button>
+            <button onclick="setTool(6)" id="tool-6">7. 🌱 Zona de Cultivo</button>
             <hr>
-            <button onclick="setTool(9)" id="tool-9">9. 🏹 Cazar (Animales)</button>
-            <button onclick="setTool(10)" id="tool-10">10. 🍖 Domesticar</button>
+            <button onclick="setTool(8)" id="tool-8">8. 🏹 Cazar Animales</button>
+            <button onclick="setTool(9)" id="tool-9">9. 🍖 Domesticar Animales</button>
             <hr>
-            <button onclick="setTool(6)" id="tool-6" style="color: #ff4c4c;">6. ❌ Cancelar / Demoler</button>
+            <button onclick="setTool(10)" id="tool-10" style="color: #ff4c4c;">10. ❌ Cancelar / Demoler</button>
         </div>
         <p>Población total: <span id="ui-poblacion" class="highlight">3</span></p>
     </div>
@@ -49,22 +50,25 @@
     <div id="inspector-layer" style="display: none;">
         <h2 id="insp-nombre">Nombre</h2>
         <p>Edad: <span id="insp-edad">20</span> | Pareja: <span id="insp-pareja">Ninguna</span></p>
+        <p>Cama Asignada: <span id="insp-cama" class="highlight">Sin Cama</span></p>
         <p>Estado: <span id="insp-estado" class="highlight">Vagando</span></p>
         
         <p class="subtitle">Necesidades:</p>
         <div class="bar-bg"><div id="insp-energia" class="bar-fill-energia" style="width: 100%"></div></div>
         <div class="bar-bg"><div id="insp-hambre" class="bar-fill-hambre" style="width: 100%"></div></div>
 
-        <p class="subtitle">Trabajos Permitidos:</p>
-        <label><input type="checkbox" id="chk-mineria" onchange="toggleJob('mineria')"> Minería / Caza</label><br>
-        <label><input type="checkbox" id="chk-construccion" onchange="toggleJob('construccion')"> Construcción</label><br>
-        <label><input type="checkbox" id="chk-agricultura" onchange="toggleJob('agricultura')"> Agricultura / Domest.</label>
+        <p class="subtitle">Prioridades de Trabajo:</p>
+        <label><input type="checkbox" id="chk-mineria" onchange="toggleJob('mineria')"> ⛏️ Minería / Excavación</label><br>
+        <label><input type="checkbox" id="chk-caza" onchange="toggleJob('caza')"> 🏹 Caza</label><br>
+        <label><input type="checkbox" id="chk-construccion" onchange="toggleJob('construccion')"> 🧱 Construcción</label><br>
+        <label><input type="checkbox" id="chk-agricultura" onchange="toggleJob('agricultura')"> 🌱 Agricultura</label><br>
+        <label><input type="checkbox" id="chk-domesticacion" onchange="toggleJob('domesticacion')"> 🍖 Domesticación</label>
     </div>
 
     <!-- Panel Inferior: Horario Global -->
     <div id="schedule-layer">
         <strong>Horario Global:</strong> 
-        <span style="font-size:0.8rem; margin-left:10px;">Haz clic para cambiar (Azul: Sueño, Amarillo: Trabajo, Verde: Ocio)</span>
+        <span style="font-size:0.75rem; margin-left:10px;">Clic en hora para cambiar (Azul: Sueño | Amarillo: Trabajo | Verde: Ocio)</span>
         <div id="schedule-bar"></div>
     </div>
 
