@@ -124,7 +124,7 @@ function detectarHabitaciones(startX, startZ) {
     }
 }
 
-// --- COLONOS (VELOCIDAD AUMENTADA A 0.50) ---
+// --- COLONOS ---
 let colonos = [];
 let colonoSeleccionado = null;
 const NOMBRES = ["Val", "Kael", "Rye", "Jace", "Lyra", "Sion", "Tess"];
@@ -138,7 +138,7 @@ function crearColono(x, z, edad) {
         nombre: NOMBRES[Math.floor(Math.random() * NOMBRES.length)],
         x: x, z: z, 
         px: x, pz: z, 
-        velocidad: 0.75, // Velocidad incrementada a 0.50
+        velocidad: 0.75, 
         edad: edad, 
         energia: 100, hambre: 100,
         estadoTxt: "Vagando", 
@@ -201,6 +201,18 @@ function procesarColonos() {
         if (colono.energia < 0) colono.energia = 0;
         if (colono.hambre < 0) colono.hambre = 0;
 
+        // PRIORIDAD CRÍTICA: Necesidades físicas por encima de todo
+        let fuerzaDormir = (colono.energia < 30) || (modoActual === 0 && colono.energia < 95);
+        if (fuerzaDormir && !colono.durmiendo) {
+            if (colono.tareaActual && !colono.tareaActual.esCritica) tareasGlobales.push(colono.tareaActual);
+            buscarOCrearCamaPropia(colono);
+            continue;
+        } else if (colono.hambre < 35 && recursos.comida > 0 && colono.estadoTxt !== "Comiendo") {
+            if (colono.tareaActual && !colono.tareaActual.esCritica) tareasGlobales.push(colono.tareaActual);
+            asignarTareaComer(colono);
+            continue;
+        }
+
         // Anti-bloqueos
         if (colono.tareaActual) {
             colono.ticksEnTarea++;
@@ -210,13 +222,6 @@ function procesarColonos() {
                 colono.estadoTxt = "Reevaluando"; continue;
             }
         } else colono.ticksEnTarea = 0;
-
-        let fuerzaDormir = (colono.energia < 20) || (modoActual === 0 && colono.energia < 95);
-        if (fuerzaDormir && !colono.tareaActual?.esCritica && !colono.durmiendo) {
-            buscarOCrearCamaPropia(colono);
-        } else if (colono.hambre < 25 && recursos.comida > 0 && !colono.tareaActual?.esCritica) {
-            asignarTareaComer(colono);
-        }
 
         if (modoActual === 2 && colono.tareaActual && !colono.tareaActual.esCritica) {
             if (colono.tareaActual.tipo !== "CAZAR" && colono.tareaActual.tipo !== "DOMESTICAR") {
@@ -256,7 +261,7 @@ function procesarColonos() {
         }
 
         if (colono.durmiendo) {
-            colono.energia += 0.5; colono.estadoTxt = "Durmiendo (Zzz)";
+            colono.energia += 0.8; colono.estadoTxt = "Durmiendo (Zzz)";
             if (colono.energia >= 100 || (modoActual !== 0 && colono.energia > 50)) {
                 colono.durmiendo = false; colono.tareaActual = null; 
             }
@@ -319,10 +324,9 @@ function asignarTareaComer(c) {
     setTimeout(() => { c.tareaActual = null; }, 1000 / (gameSpeed === 0 ? 1 : gameSpeed));
 }
 
-// CORRECCIÓN DEL CRASH: VALIDACIÓN INICIAL if (!t) return;
 function ejecutarTarea(c) {
     let t = c.tareaActual;
-    if (!t) return; // Evita error Cannot read properties of null (reading 'tipo')
+    if (!t) return; 
 
     let costo = COSTOS[t.tipo] || 0;
     if (costo > 0 && recursos.biomasa < costo) { tareasGlobales.push(t); c.tareaActual = null; return; }
@@ -394,7 +398,7 @@ window.addEventListener('keydown', (e) => {
 });
 
 function setSpeed(s) {
-    if(s === 1) gameSpeed = 0.3; else if(s === 2) gameSpeed = .7; else if(s === 4) gameSpeed = 2; else gameSpeed = 0;
+    if(s === 1) gameSpeed = 0.3; else if(s === 2) gameSpeed = 0.7; else if(s === 4) gameSpeed = 2; else gameSpeed = 0;
     document.querySelectorAll('.time-controls button').forEach(b => b.classList.remove('active'));
     if(s===0) document.getElementById('btn-pause').classList.add('active');
     if(s===1) document.getElementById('btn-1x').classList.add('active');
@@ -512,11 +516,25 @@ function aplicarHerramientaCelda(mx, mz) {
         else if (celda.estructura !== ESTRUCTURA.NINGUNA) { celda.plano = BLUEPRINT.DESTRUIR; tareasGlobales.push({ tipo: "DESTRUIR", req: "construccion", x: mx, z: mz }); }
         return;
     }
+
+    // EVITAR SUPERPOSICIÓN DE ZONAS (Si ya hay una zona o cultivo activo, no se pisa)
     if (modoHerramienta === 7) { // ZONA DE EXTRACCIÓN AUTO
+        if (celda.esZonaExtraccion || celda.estructura === ESTRUCTURA.CULTIVO) return;
         celda.esZonaExtraccion = true;
-        if (celda.regeneracionBiomasa === 100 && celda.estructura === ESTRUCTURA.NINGUNA) { celda.plano = BLUEPRINT.MINAR; tareasGlobales.push({ tipo: "MINAR", req: "mineria", x: mx, z: mz }); }
+        if (celda.regeneracionBiomasa === 100 && celda.estructura === ESTRUCTURA.NINGUNA) { 
+            celda.plano = BLUEPRINT.MINAR; 
+            tareasGlobales.push({ tipo: "MINAR", req: "mineria", x: mx, z: mz }); 
+        }
         return;
     }
+    
+    if (modoHerramienta === 6) { // ZONA DE CULTIVO (Evita que se ponga encima de zona de extracción o cultivo existente)
+        if (celda.esZonaExtraccion || celda.estructura === ESTRUCTURA.CULTIVO || celda.plano === BLUEPRINT.CONSTRUIR_CULTIVO) return;
+        celda.plano = BLUEPRINT.CONSTRUIR_CULTIVO;
+        tareasGlobales.push({ tipo: "CONSTRUIR_CULTIVO", req: "agricultura", x: mx, z: mz });
+        return;
+    }
+
     if (modoHerramienta === 8 || modoHerramienta === 9) { // CAZA O DOMESTICACIÓN
         let anim = animales.find(a => a.x === mx && a.z === mz);
         if (anim && anim.estado === "salvaje") {
@@ -527,7 +545,7 @@ function aplicarHerramientaCelda(mx, mz) {
     }
 
     if (celda.plano === BLUEPRINT.NINGUNO && celda.estructura === ESTRUCTURA.NINGUNA) {
-        if (modoHerramienta === 1 && celda.regeneracionBiomasa === 100) { celda.plano = BLUEPRINT.MINAR; tareasGlobales.push({ tipo: "MINAR", req: "mineria", x: mx, z: mz }); }
+        if (modoHerramienta === 1 && celda.regeneracionBiomasa === 100 && !celda.esZonaExtraccion) { celda.plano = BLUEPRINT.MINAR; tareasGlobales.push({ tipo: "MINAR", req: "mineria", x: mx, z: mz }); }
         if (modoHerramienta === 2) { celda.plano = BLUEPRINT.CONSTRUIR_PARED; tareasGlobales.push({ tipo: "CONSTRUIR_PARED", req: "construccion", x: mx, z: mz }); }
         if (modoHerramienta === 3) { celda.plano = BLUEPRINT.CONSTRUIR_PUERTA; tareasGlobales.push({ tipo: "CONSTRUIR_PUERTA", req: "construccion", x: mx, z: mz }); }
         if (modoHerramienta === 4) { 
@@ -538,7 +556,6 @@ function aplicarHerramientaCelda(mx, mz) {
             }
         }
         if (modoHerramienta === 5) { celda.plano = BLUEPRINT.CONSTRUIR_MESA; tareasGlobales.push({ tipo: "CONSTRUIR_MESA", req: "construccion", x: mx, z: mz }); }
-        if (modoHerramienta === 6) { celda.plano = BLUEPRINT.CONSTRUIR_CULTIVO; tareasGlobales.push({ tipo: "CONSTRUIR_CULTIVO", req: "agricultura", x: mx, z: mz }); }
     }
 }
 
