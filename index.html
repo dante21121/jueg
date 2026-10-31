@@ -3,25 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AETHEL: Vertical Slice (Juego Completo)</title>
+    <title>AETHEL: RimWorld Edition</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <!-- Capa de Inmersión (Fase 5) -->
-    <div id="ocean-overlay"></div>
+    <div id="night-overlay"></div>
 
     <div id="ui-layer">
-        <h2>AETHEL: Leviathan Ecosystem</h2>
+        <h2>AETHEL: Colonia</h2>
         <div class="stats">
-            <p>Tick Fluidos: <span id="fluid-tick-count" class="highlight">0</span></p>
-            <p>Tick Entidades: <span id="colonist-tick-count" class="highlight">0</span></p>
+            <p>Día: <span id="ui-dia" class="highlight">1</span> | Hora: <span id="ui-hora" class="highlight">06:00</span></p>
+            <p>Recursos: <span id="ui-biomasa" style="color: #a0e6ff; font-weight: bold;">0 Biomasa</span> | <span id="ui-comida" style="color: #ffaa00; font-weight: bold;">10 Comida</span></p>
             <hr>
-            <p>Población: <span class="highlight">5</span> | Anticuerpos: <span id="anticuerpos-count" style="color: #ff4c4c;">0</span></p>
-            <p>Salud Leviatán: <progress id="salud-bar" value="100" max="100"></progress></p>
-            <p>Clima: <span id="clima-estado" class="highlight">Templado</span></p>
+            <p><strong>Herramienta (ESPACIO para cambiar)</strong></p>
+            <p><span id="tool-mode" class="highlight">1. Extraer (Minar Tejido)</span></p>
             <hr>
-            <p>Herramienta (ESPACIO): <br><span id="tool-mode" class="highlight">Derramar Linfa</span></p>
-            <button id="btn-inmersion">Activar Inmersión</button>
+            <div id="colono-list">
+                <!-- Se llenará dinámicamente por JS -->
+            </div>
         </div>
     </div>
     <canvas id="gameCanvas"></canvas>
