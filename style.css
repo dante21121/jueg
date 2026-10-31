@@ -1,55 +1,43 @@
 :root {
-    --bg-color: #0d0d12;
-    --ui-bg: rgba(15, 20, 30, 0.85);
+    --bg-color: #050508;
+    --ui-bg: rgba(15, 20, 30, 0.9);
     --text-main: #c5c6c7;
     --text-highlight: #66fcf1;
     --border-color: #45a29e;
 }
 
 body {
-    margin: 0; padding: 0;
-    background-color: var(--bg-color);
-    color: var(--text-main);
-    font-family: 'Courier New', Courier, monospace;
-    overflow: hidden;
-    display: flex; justify-content: center; align-items: center;
-    height: 100vh;
+    margin: 0; padding: 0; background-color: var(--bg-color); color: var(--text-main);
+    font-family: 'Courier New', Courier, monospace; overflow: hidden;
+    display: flex; justify-content: center; align-items: center; height: 100vh;
 }
 
 #ui-layer {
-    position: absolute; top: 20px; left: 20px;
-    background: var(--ui-bg); padding: 20px;
-    border: 1px solid var(--border-color); border-radius: 8px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(4px); z-index: 10;
+    position: absolute; top: 20px; left: 20px; background: var(--ui-bg); padding: 15px;
+    border: 1px solid var(--border-color); border-radius: 4px; z-index: 10; width: 280px;
 }
 
-h2 { margin-top: 0; font-size: 1.2rem; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; }
-.stats p { margin: 8px 0; font-size: 0.95rem; }
+h2 { margin-top: 0; font-size: 1.1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; }
+.stats p { margin: 6px 0; font-size: 0.9rem; }
 .highlight { color: var(--text-highlight); font-weight: bold; }
-hr { border: 0.5px solid var(--border-color); margin: 15px 0; opacity: 0.5; }
+hr { border: 0.5px solid var(--border-color); margin: 10px 0; opacity: 0.3; }
 
-/* Barra de salud del Leviatán */
-progress { width: 100%; height: 12px; accent-color: #ff4c4c; background-color: #333; }
-
-/* Botón de Emergencia */
-#btn-inmersion {
-    width: 100%; padding: 10px; margin-top: 10px;
-    background-color: #8a2b3b; color: white;
-    border: 1px solid #ff4c4c; cursor: pointer;
-    font-family: inherit; font-weight: bold;
-    transition: 0.3s;
+/* Lista de Colonos (RimWorld Style) */
+#colono-list { max-height: 300px; overflow-y: auto; }
+.colono-card {
+    background: rgba(0, 0, 0, 0.5); border-left: 3px solid var(--text-highlight);
+    padding: 8px; margin-bottom: 5px; font-size: 0.8rem;
 }
-#btn-inmersion:hover { background-color: #ff4c4c; color: black; }
+.bar-bg { width: 100%; background: #333; height: 6px; margin-top: 4px; }
+.bar-fill-energia { background: #4caf50; height: 100%; }
+.bar-fill-hambre { background: #ff9800; height: 100%; }
 
-canvas { border: 2px solid #1f2833; background-color: #000; box-shadow: 0 0 30px rgba(102, 252, 241, 0.1); }
+canvas { border: 2px solid #1f2833; background-color: #000; }
 
-/* Evento de Inmersión (Pantalla azul oscura submarina) */
-#ocean-overlay {
-    position: absolute; top: 0; left: 0;
-    width: 100vw; height: 100vh;
-    background: rgba(0, 15, 40, 0.6);
-    pointer-events: none; z-index: 5;
-    opacity: 0; transition: opacity 2s ease-in-out;
+/* Ciclo de Día y Noche */
+#night-overlay {
+    position: absolute; top: 0; left: 0; width: 100vw; height: 100vh;
+    background: rgba(0, 5, 20, 0.85); pointer-events: none; z-index: 5;
+    opacity: 0; transition: opacity 3s ease-in-out; mix-blend-mode: multiply;
 }
-.inmerso { opacity: 1 !important; }
+.es-noche { opacity: 1 !important; }
